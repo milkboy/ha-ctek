@@ -1,0 +1,11 @@
+{
+  "domain": "ctek",
+  "name": "CTEK App",
+  "codeowners": ["@milkboy"],
+  "config_flow": true,
+  "documentation": "https://github.com/milkboy/ha-ctek",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/milkboy/ha-ctek/issues",
+  "requirements": [],
+  "version": "0.0.1"
+}
