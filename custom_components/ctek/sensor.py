@@ -199,9 +199,9 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
         )
 
         SensorEntity.__init__(self)
-        self._attr_native_value = self.coordinator.get_property(
-            self.entity_description.key
-        )
+        # self._attr_native_value = self.coordinator.get_property(
+        #    self.entity_description.key
+        # )
 
     @cached_property  # type: ignore[misc]
     def native_value(self) -> StateType | date | datetime | Decimal:
@@ -229,6 +229,8 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
 
         self._attr_native_value = val
 
-        self._attr_icon_color = None if self._icon_color_func is None else self._icon_color_func(val)
+        self._attr_icon_color = (
+            None if self._icon_color_func is None else self._icon_color_func(val)
+        )
 
         self.schedule_update_ha_state()
