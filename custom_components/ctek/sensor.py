@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 from dateutil.parser import ParserError, parse
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
-    cached_property,
 )
 from homeassistant.components.sensor.const import (
     SensorDeviceClass,
@@ -18,6 +18,7 @@ from .entity import CtekEntity, callback
 from .types import ChargeStateEnum
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from datetime import date, datetime
     from decimal import Decimal
 
@@ -29,6 +30,39 @@ if TYPE_CHECKING:
     from .data import CtekConfigEntry
 
 
+def status_icon(status):
+    """Get the icon corresponding to a given charge state.
+
+    Args:
+        status (ChargeStateEnum): The charge state for which to get the icon.
+
+    Returns:
+        str: The icon associated with the given charge state. If the status is not recognized, returns "mdi:ev-station".
+
+    """
+    return {
+        ChargeStateEnum.AVAILABLE.value: "mdi:power-plug-off",
+        ChargeStateEnum.CHARGING.value: "mdi:battery-charging-medium",
+        ChargeStateEnum.SUSPENDED_EVSE.value: "mdi:timer-pause",
+        ChargeStateEnum.SUSPENDED_EV.value: "mdi:battery",
+        ChargeStateEnum.PREPARING.value: "mdi:battery-alert",
+        ChargeStateEnum.FINISHING.value: "mdi:pause-octagon",
+    }.get(status, "mdi:ev-station")
+
+
+def status_icon_color(status):
+    """Return the color code for the given status.
+
+    Args:
+        status (str): The status for which the color code is required.
+
+    Returns:
+        str: The color code as a hexadecimal string.
+
+    """
+    return "#ff1111"
+
+
 async def async_setup_entry(
     hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
     entry: CtekConfigEntry,
@@ -37,7 +71,7 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     async_add_entities(
         [
-            #CtekSensor(
+            # CtekSensor(
             #    coordinator=entry.runtime_data.coordinator,
             #    entity_description=SensorEntityDescription(
             #        key="charging_session.transaction_id",
@@ -48,7 +82,7 @@ async def async_setup_entry(
             #        device_class=None,
             #    ),
             #    device_id=entry.data["device_id"],
-            #),
+            # ),
             CtekSensor(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
@@ -107,13 +141,14 @@ async def async_setup_entry(
                     entity_description=SensorEntityDescription(
                         key=f"device_status.connectors.{e}.current_status",
                         name=f"Connector {e} Status",
-                        icon="mdi:status",
                         device_class=SensorDeviceClass.ENUM,
                         options=[e.value for e in ChargeStateEnum],
                         translation_key="connector.status",
                         translation_placeholders={"conn": str(e)},
                         has_entity_name=True,
                     ),
+                    icon_func=status_icon,
+                    icon_color_func=status_icon_color,
                     device_id=entry.data["device_id"],
                 )
                 for e in range(
@@ -126,7 +161,7 @@ async def async_setup_entry(
                     entity_description=SensorEntityDescription(
                         key=f"device_status.connectors.{e}.start_date",
                         name=f"Connector {e} Start date",
-                        icon="mdi:status",
+                        icon="mdi:calendar",
                         device_class=SensorDeviceClass.DATE,
                         translation_key="connector.start_date",
                         translation_placeholders={"conn": str(e)},
@@ -150,18 +185,25 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
         coordinator: CtekDataUpdateCoordinator,
         entity_description: SensorEntityDescription,
         device_id: str,
+        icon_func: Callable | None = None,
+        icon_color_func: Callable | None = None,  # FIXME: not working :sad_panda:
     ) -> None:
         """Initialize the sensor class."""
-        super().__init__(
+        CtekEntity.__init__(
+            self=self,
             coordinator=coordinator,
             entity_description=entity_description,
             device_id=device_id,
+            icon_color_func=icon_color_func,
+            icon_func=icon_func,
         )
+
+        SensorEntity.__init__(self)
         self._attr_native_value = self.coordinator.get_property(
             self.entity_description.key
         )
 
-    @cached_property # type: ignore[misc]
+    @cached_property  # type: ignore[misc]
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         if self.device_class == SensorDeviceClass.DATE:
@@ -173,13 +215,11 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        val = self.coordinator.get_property(
-            self.entity_description.key
-        )
+        val = self.coordinator.get_property(self.entity_description.key)
 
         if val is None or val == "":
             val = None
-        elif self.device_class == SensorDeviceClass.DATE:
+        elif self.device_class == SensorDeviceClass.DATE and isinstance(val, str):
             try:
                 val = parse(str(val))
             except ParserError:
@@ -188,5 +228,7 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
                 val = None
 
         self._attr_native_value = val
+
+        self._attr_icon_color = None if self._icon_color_func is None else self._icon_color_func(val)
 
         self.schedule_update_ha_state()

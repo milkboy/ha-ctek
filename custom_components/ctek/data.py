@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
@@ -42,7 +43,17 @@ class DeviceInfoType(TypedDict):
 class ChargingSessionType(TypedDict):
     """Charging session data."""
 
-    transaction_id: int
+    device_id: str | None
+    ongoing_transaction: bool | None
+    transaction_id: int | None
+    watt_hours_consumed: int | None
+    momentary_voltage: str | None
+    momentary_power: str | None
+    momentary_current: str | None
+    start_time: datetime | None
+    last_updated_time: datetime | None
+    device_online: bool | None
+    type: str | None
 
 
 class ConfigsType(TypedDict):
@@ -59,13 +70,14 @@ class ConnectorType(TypedDict):
     # TODO: should the dates be handled as dates?
 
     current_status: list[ChargeStateEnum]
-    update_date: str
+    update_date: datetime | None
     status_reason: StatusReasonEnum
-    start_date: str
+    start_date: datetime | None
     relative_time: str | None
     has_schedule: bool | None
     has_active_schedule: bool | None
     has_overridden_schedule: bool | None
+    state_localize_key: str | None
 
 
 class ThirdPartyOcppStatusType(TypedDict):
