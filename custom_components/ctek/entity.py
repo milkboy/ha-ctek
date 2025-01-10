@@ -2,16 +2,25 @@
 
 from __future__ import annotations
 
-from homeassistant.core import callback
+from typing import TYPE_CHECKING, Any
+
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LOGGER
 from .coordinator import CtekDataUpdateCoordinator
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator]):
+    from homeassistant.helpers.entity import EntityDescription
+
+def callback(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Return the callback function."""
+    return func
+
+
+class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator]): # type: ignore[misc]
     """CtekEntity class."""
 
     def __init__(

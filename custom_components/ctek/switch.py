@@ -9,10 +9,9 @@ from homeassistant.components.switch import (
     SwitchEntity,
     SwitchEntityDescription,
 )
-from homeassistant.core import callback
 
 from .const import LOGGER
-from .entity import CtekEntity
+from .entity import CtekEntity, callback
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -21,6 +20,16 @@ if TYPE_CHECKING:
     from .coordinator import CtekDataUpdateCoordinator
     from .data import CtekConfigEntry
 
+ENTITY_DESCRIPTIONS = (
+    SwitchEntityDescription(
+        key="configs.AuthMode",
+        name="Require authorization before starting charge",
+        translation_key="require_auth",
+        icon="mdi:lock",
+        has_entity_name=True,
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
@@ -28,16 +37,6 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the switch platform."""
-    ENTITY_DESCRIPTIONS = (
-        SwitchEntityDescription(
-            key="configs.AuthMode",
-            name="Require authorization before starting charge",
-            translation_key="require_auth",
-            icon="mdi:lock",
-            has_entity_name=True,
-        ),
-    )
-
     async_add_entities(
         [
             *[
@@ -71,8 +70,10 @@ async def async_setup_entry(
     )
 
 
-class CtekSwitch(CtekEntity, SwitchEntity):
+class CtekSwitch(CtekEntity, SwitchEntity):  # type: ignore[misc]
     """ctek switch class."""
+
+    _attr_is_on: bool | None
 
     def __init__(
         self,
@@ -93,21 +94,19 @@ class CtekSwitch(CtekEntity, SwitchEntity):
         if self.coordinator.data is None:
             return False
         val = self.coordinator.get_property(self.entity_description.key)
-        return val == "true"
+        return bool(val)
 
     async def async_turn_on(self, **_: Any) -> None:
         """Turn on the switch."""
         await self.coordinator.set_config(
             name=self.entity_description.key, value="true"
         )
-        # await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **_: Any) -> None:
         """Turn off the switch."""
         await self.coordinator.set_config(
             name=self.entity_description.key, value="false"
         )
-        # await self.coordinator.async_request_refresh()
 
     @callback
     def _handle_coordinator_update(self) -> None:
