@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import copy
 import json
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import CONF_DEVICE_ID
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import (
@@ -20,13 +18,19 @@ from .api import CtekApiClientAuthenticationError, CtekApiClientError
 from .const import DOMAIN, LOGGER, WS_URL
 
 if TYPE_CHECKING:
+    from datetime import timedelta
+
+    from homeassistant.core import HomeAssistant
+
     from .data import CtekConfigEntry
 
 from .data import ConnectorType, DataType
 from .ws import WebSocketClient
 
 
-class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
+class CtekDataUpdateCoordinator(
+    TimestampDataUpdateCoordinator[DataType]  # type: ignore[misc]
+):
     """Class to manage fetching data from the API."""
 
     config_entry: CtekConfigEntry
@@ -38,6 +42,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         hass: HomeAssistant,
         config_entry: CtekConfigEntry,
         update_interval: timedelta,
+        *,
         always_update: bool = False,
     ) -> None:
         """Initialize the coordinator."""
@@ -54,17 +59,19 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             config_entry=config_entry,
         )
 
-    async def async_unload_entry(self, hass: HomeAssistant, entry: CtekConfigEntry):
+    async def async_unload_entry(
+        self, hass: HomeAssistant, entry: CtekConfigEntry
+    ) -> bool:
         """Unload a config entry."""
         client = hass.data[DOMAIN][entry.entry_id].get("websocket_client")
         if client:
             await client.stop()
         return True
 
-    async def _async_setup(self):
+    async def _async_setup(self) -> bool:
         """First run. Set up the data from the API and create device."""
         try:
-            devices = await self.config_entry.runtime_data.client.listDevices()
+            devices = await self.config_entry.runtime_data.client.list_devices()
             d = devices.get("data", [])
             for device in devices.get("data", []):
                 if self.device_id != device["device_id"]:
@@ -90,32 +97,29 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     config_entry_id=self.config_entry.entry_id,
                     identifiers={(DOMAIN, self.data["device_id"])},
                     manufacturer="CTEK",
-                    # entry_type=DeviceEntrtyType
                     name=device["device_alias"],
                     model=device["model"],
                     model_id=device["standardized_model"],
                     sw_version=device["firmware_id"],
                     hw_version=device["hardware_id"],
-                )
-
-                self.device_entry = device_registry.async_update_device(
-                    tmp.id,
-                    new_connections={
+                    connections={
                         (
                             dr.CONNECTION_NETWORK_MAC,
                             device["device_info"]["mac_address"],
                         )
                     },
                 )
-
+                self.device_entry = tmp
+                return True
         except CtekApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
         except CtekApiClientError as exception:
             raise UpdateFailed(exception) from exception
 
+        return False
+
     async def _async_update_data(self) -> Any:
         """Update data via library."""
-        ret: DataType = DataType()
 
         async def ws_message(message: str) -> None:
             # Process the incoming message
@@ -134,7 +138,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 new_data["device_status"]["connectors"][data.get("id")] = c
             else:
                 LOGGER.error(f"Not implemented: {message}")
-            # self.parse_data(data)
 
             self.async_set_updated_data(new_data)
 
@@ -160,7 +163,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             )
 
         try:
-            devices = await self.config_entry.runtime_data.client.listDevices()
+            devices = await self.config_entry.runtime_data.client.list_devices()
 
             configs = (
                 (
@@ -179,15 +182,14 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
             LOGGER.debug(ret)
 
-        # TODO:
-        # fetch charging schedules
+        # TODO: fetch charging schedules
         except CtekApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
         except CtekApiClientError as exception:
             raise UpdateFailed(exception) from exception
         return ret
 
-    def get_property(self, key: str) -> str | bool | int | None:
+    def get_property(self, key: str) -> str | bool | int | None:  # noqa: PLR0911
         """Get property value."""
         if key.startswith("configs."):
             return self.get_configuration(key)
@@ -197,23 +199,26 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             connector = key.removeprefix("device_status.connectors.")[0]
             key = key.removeprefix(f"device_status.connectors.{connector}.")
             if key in self.data["device_status"]["connectors"][connector]:
-                return self.data["device_status"]["connectors"][connector][key]
+                return self.data["device_status"]["connectors"][connector][key]  # type: ignore[literal-required,no-any-return]
             return None
 
         if key.startswith("firmware_update."):
             key = key.removeprefix("firmware_update.")
             if key in self.data["firmware_update"]:
-                return self.data["firmware_update"][key]
+                return self.data["firmware_update"][key]  # type: ignore[literal-required,no-any-return]
             return None
 
         if key.startswith("charging_session."):
             key = key.removeprefix("charging_session.")
-            if key in self.data["charging_session"]:
-                return self.data["charging_session"][key]
+            if (
+                self.data["charging_session"] is not None
+                and key in self.data["charging_session"]
+            ):
+                return self.data["charging_session"][key]  # type: ignore[literal-required,no-any-return]
             return None
 
         if key in self.data:
-            return self.data[key]
+            return self.data[key]  # type: ignore[literal-required,no-any-return]
         LOGGER.debug(f"Property {key} not found")
         return None
 
@@ -243,7 +248,32 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
     def parse_data(self, data: list) -> DataType:
         """Parse data."""
-        ret: DataType = {}
+        ret: DataType = {
+            "device_id": "",
+            "device_alias": "",
+            "device_type": "",
+            "hardware_id": "",
+            "firmware_id": "",
+            "model": "",
+            "standardized_model": "",
+            "number_of_connectors": 0,
+            "firmware_version": "",
+            "device_status": {
+                "connected": False,
+                "connectors": {},
+                "load_balancing_onboarded": False,
+                "third_party_ocpp_status": {"external_ocpp": False},
+            },
+            "firmware_update": {"update_available": False},
+            "has_schedules": False,
+            "device_info": {
+                "mac_address": "",
+                "passkey": "",
+            },
+            "owner": False,
+            "configs": [],
+            "charging_session": None,
+        }
         for d in data:
             if d["device_id"] == self.device_id:
                 ret["device_id"] = d.get("device_id")
@@ -311,20 +341,21 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         return None
 
     def update_configuration(
-        self, key: str, value: str, ret: bool = False
+        self, key: str, value: str, *, ret: bool = False
     ) -> DataType | None:
         """Update configuration value."""
         if key.startswith("configs."):
             key = key.replace("configs.", "")
-        tmp = copy.deepcopy(self.data)
+        tmp: DataType = copy.deepcopy(self.data)
         found = False
-        for c in tmp.get("configs"):
+        for c in tmp["configs"]:
             if c["key"] == key:
                 c["value"] = value
                 found = True
                 break
         if not found:
-            raise ValueError(f"Configuration key {key} not found")
+            err_str = f"Configuration key {key} not found"
+            raise ValueError(err_str)
         if ret:
             return tmp
         self.data = tmp
@@ -335,7 +366,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         for c in values:
             self.update_configuration(c.get("key"), c.get("value"))
 
-    async def start_charge(self, connector_id: int):
+    async def start_charge(self, connector_id: int) -> None:
         """Logic for starting a charge."""
         LOGGER.info(f"Starting charge on connector {connector_id}")
         # Check connector state
@@ -343,7 +374,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         # set meter value reporting to 30 s?
         # send start command
 
-    async def stop_charge(self, connector_id: int):
+    async def stop_charge(self, connector_id: int) -> None:
         """Logic for stopping a charge."""
         LOGGER.info(f"Stopping charge on connector {connector_id}")
         # Check connector state

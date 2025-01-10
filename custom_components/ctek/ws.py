@@ -2,6 +2,8 @@
 
 import asyncio
 import contextlib
+from collections.abc import Callable
+from typing import Any
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
@@ -11,12 +13,15 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import LOGGER, WS_USER_AGENT
 
+MAX_ERRORS = 10
+
 
 class WebSocketClient:
     """WebSocket client for CTEK integration."""
 
+    websocket: aiohttp.ClientWebSocketResponse | None
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, url: str, callback
+        self, hass: HomeAssistant, entry: ConfigEntry, url: str, callback: Callable
     ) -> None:
         """Initialize the WebSocket client."""
         self.hass = hass
@@ -24,20 +29,23 @@ class WebSocketClient:
         self.entry = entry
         self.callback = callback
         self.websocket = None
-        self.session = None
+        self.session: aiohttp.ClientSession | None = None
         self._closed = False
-        self._task = None
+        self._task: asyncio.Task | None = None
 
         # Register stop callback
         self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.stop)
 
-    async def start(self):
+    async def start(self) -> asyncio.Task:
         """Start the WebSocket client."""
         self._closed = False
-        self._task = self.hass.async_create_background_task(self._run(), "CTEK WS task")
-        return self._task
+        task: asyncio.Task[Any] = self.hass.async_create_background_task(
+            self._run(), "CTEK WS task"
+        )
+        self._task = task
+        return task
 
-    async def _run(self):
+    async def _run(self) -> None:
         """Run loop."""
         errors = 0
         while not self._closed:
@@ -47,17 +55,18 @@ class WebSocketClient:
                 if not self._closed:
                     LOGGER.error("WebSocket connection failed: %s", err)
                     errors += 1
-                    if errors > 10:
+                    if errors > MAX_ERRORS:
                         raise Exception from err  # noqa: TRY002
                     await asyncio.sleep(5)  # Wait before reconnecting
 
-    async def _connect(self):
+    async def _connect(self) -> None:
         """Connect to the WebSocket server and handle messages."""
         if self.session is None:
             self.session = async_get_clientsession(self.hass)
 
+        token = self.entry.runtime_data.client.get_access_token()
         headers = {
-            "Authorization": f"Bearer {self.entry.runtime_data.client.get_access_token()}",
+            "Authorization": f"Bearer {token}",
             "User-Agent": WS_USER_AGENT,
         }
 
@@ -104,7 +113,7 @@ class WebSocketClient:
                     LOGGER.error("WebSocket error: %s", err)
                     break
 
-    async def stop(self, event=None):
+    async def stop(self, event: Any=None) -> None:  # noqa: ARG002
         """Stop the WebSocket client."""
         self._closed = True
         if self.websocket is not None:

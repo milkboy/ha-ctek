@@ -6,13 +6,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.loader import Integration
-
-from .api import CtekApiClient
 
 if TYPE_CHECKING:
+    from homeassistant.loader import Integration
+
+    from .api import CtekApiClient
     from .coordinator import CtekDataUpdateCoordinator
-from .types import ChargeStateEnum, StatusReasonEnum
+    from .types import ChargeStateEnum, StatusReasonEnum
 
 type CtekConfigEntry = ConfigEntry[CtekData]
 
@@ -26,30 +26,26 @@ class CtekData:
     integration: Integration
 
 
-@dataclass
-class FirmwareUpdateType:
+class FirmwareUpdateType(TypedDict):
     """Firmware update related data."""
 
     update_available: bool
 
 
-@dataclass
-class DeviceInfoType:
+class DeviceInfoType(TypedDict):
     """Misc device info."""
 
     mac_address: str
     passkey: str
 
 
-@dataclass
-class ChargingSessionType:
+class ChargingSessionType(TypedDict):
     """Charging session data."""
 
     transaction_id: int
 
 
-@dataclass
-class ConfigsType:
+class ConfigsType(TypedDict):
     """Configs data type."""
 
     key: str
@@ -57,8 +53,7 @@ class ConfigsType:
     read_only: bool
 
 
-@dataclass
-class ConnectorType:
+class ConnectorType(TypedDict):
     """Connector data type."""
 
     # TODO: should the dates be handled as dates?
@@ -73,20 +68,17 @@ class ConnectorType:
     has_overridden_schedule: bool | None
 
 
-@dataclass
-class ThirdPartyOcppStatusType:
+class ThirdPartyOcppStatusType(TypedDict):
     """More or less unknown stuff..."""
 
     external_ocpp: bool
 
 
-@dataclass
-class DeviceStatusType:
+class DeviceStatusType(TypedDict):
     """Connector data type."""
 
     connected: bool
     connectors: dict[str, ConnectorType]
-    read_only: bool
     load_balancing_onboarded: bool
     third_party_ocpp_status: ThirdPartyOcppStatusType
 
@@ -106,7 +98,7 @@ class DataType(TypedDict):
     has_schedules: bool
     owner: bool
     configs: list[ConfigsType]
-    charging_session: ChargingSessionType
+    charging_session: ChargingSessionType | None
     device_status: DeviceStatusType
     device_info: DeviceInfoType
     firmware_update: FirmwareUpdateType

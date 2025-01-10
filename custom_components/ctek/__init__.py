@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
     from .data import CtekConfigEntry
+    from .ws import WebSocketClient
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -42,15 +43,17 @@ async def async_setup_entry(
         client=CtekApiClient(
             username=entry.data[CONF_USERNAME],
             password=entry.data[CONF_PASSWORD],
+            client_id=entry.data["client_id"],
+            client_secret=entry.data["client_secret"],
             session=async_get_clientsession(hass),
-            # refresh_token=entry.data.get("refresh_token", None),
+            # refresh_token=entry.data.get("refresh_token", None),  # noqa: ERA001
             refresh_token=None,  # getting 400 from the auth endpoint.. :shrug:
         ),
         integration=async_get_loaded_integration(hass, entry.domain),
         coordinator=coordinator,
     )
 
-    async def shutdown_listener(event):
+    async def shutdown_listener(event) -> None:  # type: ignore[no-untyped-def] # noqa: ARG001, ANN001
         LOGGER.info(f"Shutting down {DOMAIN} integration")
         # Cleanup code, close connections, etc.
         # Store current refresh token to avoid login on startup
@@ -84,11 +87,10 @@ async def async_unload_entry(
     entry: CtekConfigEntry,
 ) -> bool:
     """Handle removal of an entry."""
-    from homeassistant.components.ctek.ws import WebSocketClient
-
     client: WebSocketClient = hass.data[DOMAIN][entry.entry_id]["websocket_client"]
     await client.stop()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return True
 
 
 async def async_reload_entry(
