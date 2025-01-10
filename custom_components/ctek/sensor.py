@@ -2,27 +2,24 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dateutil.parser import parse
-from homeassistant.components.sensor import (
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor.const import (
     SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    StateType,
-    date,
-    datetime,
 )
-from homeassistant.core import callback
-from propcache import cached_property
 
-from .entity import CtekEntity
+from .entity import CtekEntity, callback
 from .types import ChargeStateEnum
 
 if TYPE_CHECKING:
+    from datetime import date, datetime
+    from decimal import Decimal
+
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
+    from homeassistant.helpers.typing import StateType
 
     from .coordinator import CtekDataUpdateCoordinator
     from .data import CtekConfigEntry
@@ -53,7 +50,6 @@ async def async_setup_entry(
                     key="charging_session.transaction_id",
                     name="Transaction ID",
                     icon="mdi:id-card",
-                    # device_class=SensorDeviceClass.NUMERIC,
                     translation_key="transaction_id",
                     has_entity_name=True,
                 ),
@@ -152,7 +148,7 @@ async def async_setup_entry(
     )
 
 
-class CtekSensor(CtekEntity, SensorEntity):
+class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
     """ctek Sensor class."""
 
     def __init__(
@@ -170,9 +166,8 @@ class CtekSensor(CtekEntity, SensorEntity):
         self._attr_native_value = self.coordinator.get_property(
             self.entity_description.key
         )
-        self._attr_extra_state_attributes = {}
+        self._attr_extra_state_attributes: dict[str, Any] = {}
 
-    @cached_property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         if self.device_class == SensorDeviceClass.DATE:

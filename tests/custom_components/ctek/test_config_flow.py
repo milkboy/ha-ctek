@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.ctek.const import DOMAIN
 
 
-async def test_flow_user_init(hass: HomeAssistant):
+async def test_flow_user_init(hass: HomeAssistant) -> None:
     """Test the initialization of the form in the first step of the config flow."""
     with patch("homeassistant.loader.async_get_integration", return_value=AsyncMock()):
         result = await hass.config_entries.flow.async_init(
@@ -23,4 +23,5 @@ async def test_flow_user_init(hass: HomeAssistant):
             "step_id": "user",
             "type": "form",
         }
-        assert expected == result
+        if expected == result:
+            raise ValueError
