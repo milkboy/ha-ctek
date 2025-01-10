@@ -6,9 +6,7 @@ import copy
 import json
 from typing import TYPE_CHECKING, Any
 
-from dateutil.parser import ParserError, parse
-
-from homeassistant.components.ctek.types import ChargeStateEnum
+from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
@@ -19,6 +17,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import CtekApiClientAuthenticationError, CtekApiClientError
 from .const import DOMAIN, LOGGER, WS_URL
+from .types import ChargeStateEnum
 
 if TYPE_CHECKING:
     from datetime import timedelta
