@@ -420,8 +420,10 @@ class CtekDataUpdateCoordinator(
             device_id=self.device_id,
             connector_id=connector_id,
             resume_schedule=self.data.get("device_status", {}).get("connectors", {}).get(str(connector_id), {}).get("has_active_schedule", False)
-            .get("connectors", {})
-            .get(str(connector_id), {})
-            .get("current_status")
-            == ChargeStateEnum.SUSPENDED_EVSE.value,
+            # Fixme: check that a charge is actually ongoing
+            #and self.data.get("device_status")
+            #.get("connectors", {})
+            #.get(str(connector_id), {})
+            #.get("current_status")
+            #== ChargeStateEnum.SUSPENDED_EVSE.value,
         )
