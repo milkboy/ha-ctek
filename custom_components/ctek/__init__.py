@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
+    Platform.NUMBER,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -47,8 +48,7 @@ async def async_setup_entry(
             client_id=entry.data["client_id"],
             client_secret=entry.data["client_secret"],
             session=async_get_clientsession(hass),
-            # refresh_token=entry.data.get("refresh_token", None),
-            refresh_token=None,  # getting 400 from the auth endpoint.. :shrug:
+            refresh_token=entry.data.get("refresh_token", None),
         ),
         integration=async_get_loaded_integration(hass, entry.domain),
         coordinator=coordinator,

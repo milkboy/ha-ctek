@@ -1,38 +1,38 @@
 {
-  "config": {
-    "abort": {
-      "already_configured": "Device is already configured",
-      "cannot_connect": "Failed to connect"
-    },
-    "error": {
-      "api_password": "Invalid authentication, use either API Key or Password.",
-      "cannot_connect": "Failed to connect",
-      "invalid_auth": "Invalid authentication",
-      "unknown": "Unexpected error"
-    },
-    "step": {
-      "user": {
-        "data": {
-          "client_id": "Client id",
-          "client_secret": "Client secret",
-          "password": "Password",
-          "username": "Username"
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured",
+            "cannot_connect": "Failed to connect"
         },
-        "description": "Enter username+password and the OAuth credentials you got.",
-        "title": "Configure the CTEK API credentials"
-      }
-    }
-  },
-  "entity": {
-    "sensor": {
-      "inside_temperature": {
-        "name": "Inside temperature"
-      }
+        "error": {
+            "api_password": "Invalid authentication, use either API Key or Password.",
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "client_id": "Client id",
+                    "client_secret": "Client secret",
+                    "password": "Password",
+                    "username": "Username"
+                },
+                "description": "Enter username+password and the OAuth credentials you got.",
+                "title": "Configure the CTEK API credentials"
+            }
+        }
     },
-    "switch": {
-      "require_auth": {
-        "name": "Require authorization before charging"
-      }
+    "entity": {
+        "sensor": {
+            "inside_temperature": {
+                "name": "Inside temperature"
+            }
+        },
+        "switch": {
+            "require_auth": {
+                "name": "Require authorization before charging"
+            }
+        }
     }
-  }
 }

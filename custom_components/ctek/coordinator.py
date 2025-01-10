@@ -6,6 +6,9 @@ import copy
 import json
 from typing import TYPE_CHECKING, Any
 
+from dateutil.parser import ParserError, parse
+
+from homeassistant.components.ctek.types import ChargeStateEnum
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
@@ -24,7 +27,7 @@ if TYPE_CHECKING:
 
     from .data import CtekConfigEntry
 
-from .data import ConnectorType, DataType
+from .data import ChargingSessionType, ConnectorType, DataType
 from .ws import WebSocketClient
 
 
@@ -124,48 +127,44 @@ class CtekDataUpdateCoordinator(
         async def ws_message(message: str) -> None:
             # Process the incoming message
             data = json.loads(message)
-            new_data = copy.deepcopy(self.data)
+            new_data: DataType = copy.deepcopy(self.data)
             if data.get("type") == "chargingSessionSummary":
                 LOGGER.debug(f"Charging session summary: {message}")
+                sessData: ChargingSessionType = {
+                    "device_id": data.get("device_id"),
+                    "transaction_id": data.get("transaction_id"),
+                    "device_online": data.get("device_online"),
+                    "last_updated_time": None
+                    if data.get("last_update_time", None) in ("", None)
+                    else parse(data.get("last_update_time")),
+                    "momentary_current": data.get("momentary_current"),
+                    "momentary_power": data.get("momentary_power"),
+                    "momentary_voltage": data.get("momentary_voltage"),
+                    "ongoing_transaction": data.get("ongoing_transaction"),
+                    "start_time": None
+                    if data.get("start_time", None) in ("", None)
+                    else parse(data.get("start_time")),
+                    "type": data.get("type"),
+                    "watt_hours_consumed": data.get("watt_hours_consumed"),
+                }
                 if new_data["charging_session"] is None:
-                    new_data["charging_session"] = data
+                    new_data["charging_session"] = sessData
                 else:
-                    new_data["charging_session"].update(data)
+                    new_data["charging_session"].update(sessData)
             elif data.get("type") == "connectorStatus":
                 LOGGER.debug(f"Status update: {message}")
                 c = copy.deepcopy(
                     self.data["device_status"]["connectors"][str(data.get("id"))]
-                    )
-                c["update_date"] = data.get("updateDate")
+                )
+                c["update_date"] = None if data.get("updateDate", None) in (None, "") else parse(data.get("updateDate"))
                 c["status_reason"] = data.get("statusReason")
                 c["current_status"] = data.get("status")
-                c["start_date"] = data.get("startDate")
+                c["start_date"] = None if data.get("startDate") in (None, "") else parse(data.get("startDate"))
                 new_data["device_status"]["connectors"][str(data.get("id"))] = c
             else:
                 LOGGER.error(f"Not implemented: {message}")
 
             self.async_set_updated_data(new_data)
-
-        # Subscribe to updates via websocket
-        client = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
-            "websocket_client"
-        )
-        if client is None:
-            websocket_url = f"{WS_URL}{self.device_id}"
-            client = WebSocketClient(
-                hass=self.hass,
-                url=websocket_url,
-                entry=self.config_entry,
-                callback=ws_message,
-            )
-
-            # Start the WebSocket connection
-            await client.start()
-
-            # Store the client instance
-            self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = (
-                client
-            )
 
         try:
             devices = await self.config_entry.runtime_data.client.list_devices()
@@ -187,6 +186,27 @@ class CtekDataUpdateCoordinator(
 
             LOGGER.debug(ret)
 
+            # Subscribe to updates via websocket
+            client = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
+                "websocket_client"
+            )
+            if client is None:
+                websocket_url = f"{WS_URL}{self.device_id}"
+                client = WebSocketClient(
+                    hass=self.hass,
+                    url=websocket_url,
+                    entry=self.config_entry,
+                    callback=ws_message,
+                )
+
+                # Start the WebSocket connection
+                await client.start()
+
+                # Store the client instance
+                self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = (
+                    client
+                )
+
         # TODO: fetch charging schedules
         except CtekApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
@@ -200,11 +220,13 @@ class CtekDataUpdateCoordinator(
             return self.get_configuration(key)
 
         # FIXME: replace with string split
+        if key.startswith("device_status.connected"):
+            return bool(self.data.get("device_status", {}).get("connected", False))
         if key.startswith("device_status.connectors."):
             connector = key.removeprefix("device_status.connectors.")[0]
             key = key.removeprefix(f"device_status.connectors.{connector}.")
-            if key in self.data["device_status"]["connectors"][connector]:
-                return self.data["device_status"]["connectors"][connector][key]  # type: ignore[literal-required,no-any-return]
+            if key in self.data["device_status"]["connectors"][str(connector)]:
+                return self.data["device_status"]["connectors"][str(connector)][key]  # type: ignore[literal-required,no-any-return]
             return None
 
         if key.startswith("firmware_update."):
@@ -322,17 +344,21 @@ class CtekDataUpdateCoordinator(
         """Parse connector related data."""
         ret = {}
         for c in connectors:
-            fff: ConnectorType = {
+            if ret.get(str(c["id"]), None) is not None:
+                old: ConnectorType = copy.deepcopy(ret[str(c["id"])])
+            else:
+                old = None
+            new: ConnectorType = {
                 "current_status": c.get("current_status"),
-                "start_date": c.get("start_date"),
+                "start_date": None if c.get("start_date") in (None, "") else parse(c.get("start_date")),
                 "status_reason": c.get("status_reason"),
-                "update_date": c.get("update_date"),
+                "update_date": None if c.get("update_date") in (None, "") else parse(c.get("update_date")),
                 "relative_time": c.get("relative_time"),
                 "has_schedule": c.get("has_schedule"),
                 "has_active_schedule": c.get("has_active_schedule"),
                 "has_overridden_schedule": c.get("has_overridden_schedule"),
             }
-            ret[str(c["id"])] = fff
+            ret[str(c["id"])] = old.update(new) if old is not None else new
         return ret
 
     def get_configuration(self, key: str) -> str | int | None:
@@ -373,7 +399,15 @@ class CtekDataUpdateCoordinator(
 
     async def start_charge(self, connector_id: int) -> None:
         """Logic for starting a charge."""
-        LOGGER.info(f"Starting charge on connector {connector_id}")
+        await self.config_entry.runtime_data.client.start_charge(
+            device_id=self.device_id,
+            connector_id=connector_id,
+            resume_charging=self.data.get("device_status", {})
+            .get("connectors", {})
+            .get(str(connector_id), {})
+            .get("current_status")
+            == ChargeStateEnum.SUSPENDED_EVSE.value,
+        )
         # Check connector state
         # override schedule?
         # set meter value reporting to 30 s?
@@ -383,3 +417,12 @@ class CtekDataUpdateCoordinator(
         """Logic for stopping a charge."""
         LOGGER.info(f"Stopping charge on connector {connector_id}")
         # Check connector state
+        await self.config_entry.runtime_data.client.stop_charge(
+            device_id=self.device_id,
+            connector_id=connector_id,
+            resume_schedule=self.data.get("device_status", {}).get("connectors", {}).get(str(connector_id), {}).get("has_active_schedule", False)
+            .get("connectors", {})
+            .get(str(connector_id), {})
+            .get("current_status")
+            == ChargeStateEnum.SUSPENDED_EVSE.value,
+        )

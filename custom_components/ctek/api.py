@@ -8,6 +8,7 @@ import socket
 from datetime import datetime, timedelta
 
 import aiohttp
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import (
@@ -33,7 +34,7 @@ def _needs_refresh(response: aiohttp.ClientResponse) -> bool:
 
 def _assert_success(response: dict) -> bool:
     """Check if we need to update tokens."""
-    return bool(response["data"]["success"])
+    return bool(response.get("data", {}).get("success"))
 
 
 def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
@@ -111,7 +112,7 @@ class CtekApiClient:
         self._refresh_token = res["refresh_token"]
 
     async def start_charge(
-        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True
+        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True, resume_charging: bool=False
     ) -> bool:
         """Set a configuration value."""
         LOGGER.debug(
@@ -129,9 +130,64 @@ class CtekApiClient:
             },
             auth=True,
         )
+        if res.get("data", {}).get("error_code", None) is not None:
+            msg = f"{res.get("data", {}).get("error_code", None)}: {res.get("data", {}).get("error_message", None)}"
+            raise HomeAssistantError(f"Failed to start charging: {msg}")
         LOGGER.debug(res["data"])
-        _assert_success(res)
-        return bool(res["data"]["instruction"]["accepted"])
+        # _assert_success(res)
+        return bool(res.get("data", {}).get("instruction", {}).get("accepted", False))
+
+    async def start_charge(
+        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True, resume_charging: bool=False
+    ) -> bool:
+        """Set a configuration value."""
+        LOGGER.debug(
+            "Trying to start charge on %s (Override schedule: %s)",
+            device_id,
+            "true" if override_schedule else "false",
+        )
+        res = await self._api_wrapper(
+            method="POST",
+            url=CONTROL_URL,
+            data={
+                "connector_id": connector_id,
+                "device_id": device_id,
+                "instruction": "START_CHARGING",
+            },
+            auth=True,
+        )
+        if res.get("data", {}).get("error_code", None) is not None:
+            msg = f"{res.get("data", {}).get("error_code", None)}: {res.get("data", {}).get("error_message", None)}"
+            raise HomeAssistantError(f"Failed to start charging: {msg}")
+        LOGGER.debug(res["data"])
+        # _assert_success(res)
+        return bool(res.get("data", {}).get("instruction", {}).get("accepted", False))
+
+    async def stop_charge(
+        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True, resume_schedule: bool=False
+    ) -> bool:
+        """Set a configuration value."""
+        LOGGER.debug(
+            "Trying to start charge on %s (Override schedule: %s)",
+            device_id,
+            "true" if override_schedule else "false",
+        )
+        res = await self._api_wrapper(
+            method="POST",
+            url=CONTROL_URL,
+            data={
+                "connector_id": connector_id,
+                "device_id": device_id,
+                "instruction": "RESUME_SCHEDULE" if resume_schedule else "STOP_CHARGING",
+            },
+            auth=True,
+        )
+        if res.get("data", {}).get("error_code", None) is not None:
+            msg = f"{res.get("data", {}).get("error_code", None)}: {res.get("data", {}).get("error_message", None)}"
+            raise HomeAssistantError(f"Failed to start charging: {msg}")
+        LOGGER.debug(res["data"])
+        # _assert_success(res)
+        return bool(res.get("data", {}).get("instruction", {}).get("accepted", False))
 
     async def set_config(self, device_id: str, name: str, value: str) -> None:
         """Set a configuration value."""

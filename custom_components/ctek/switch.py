@@ -51,7 +51,7 @@ async def async_setup_entry(
                 CtekConnectorSwitch(
                     coordinator=entry.runtime_data.coordinator,
                     entity_description=SwitchEntityDescription(
-                        key="device_status.connectors.{e}.charge",
+                        key=f"device_status.connectors.{e}.current_status",
                         name=f"Connector {e} Charging",
                         icon="mdi:ev-station",
                         device_class=SwitchDeviceClass.SWITCH,
