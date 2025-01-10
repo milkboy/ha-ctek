@@ -15,12 +15,13 @@ if TYPE_CHECKING:
 
     from homeassistant.helpers.entity import EntityDescription
 
+
 def callback(func: Callable[..., Any]) -> Callable[..., Any]:
     """Return the callback function."""
     return func
 
 
-class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator]): # type: ignore[misc]
+class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator]):  # type: ignore[misc]
     """CtekEntity class."""
 
     def __init__(
