@@ -124,18 +124,23 @@ class CtekDataUpdateCoordinator(
         async def ws_message(message: str) -> None:
             # Process the incoming message
             data = json.loads(message)
-            new_data = self.data
+            new_data = copy.deepcopy(self.data)
             if data.get("type") == "chargingSessionSummary":
                 LOGGER.debug(f"Charging session summary: {message}")
-                new_data["charging_session"] = data
+                if new_data["charging_session"] is None:
+                    new_data["charging_session"] = data
+                else:
+                    new_data["charging_session"].update(data)
             elif data.get("type") == "connectorStatus":
                 LOGGER.debug(f"Status update: {message}")
-                c = self.data["device_status"]["connectors"][data.get("id")]
+                c = copy.deepcopy(
+                    self.data["device_status"]["connectors"][str(data.get("id"))]
+                    )
                 c["update_date"] = data.get("updateDate")
                 c["status_reason"] = data.get("statusReason")
                 c["current_status"] = data.get("status")
                 c["start_date"] = data.get("startDate")
-                new_data["device_status"]["connectors"][data.get("id")] = c
+                new_data["device_status"]["connectors"][str(data.get("id"))] = c
             else:
                 LOGGER.error(f"Not implemented: {message}")
 

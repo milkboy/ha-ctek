@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from dateutil.parser import parse
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from dateutil.parser import ParserError, parse
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorEntityDescription,
+    cached_property,
+)
 from homeassistant.components.sensor.const import (
     SensorDeviceClass,
 )
@@ -33,28 +37,18 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     async_add_entities(
         [
-            CtekSensor(
-                coordinator=entry.runtime_data.coordinator,
-                entity_description=SensorEntityDescription(
-                    key="firmware_update.update_available",
-                    name="Firmware Update Available",
-                    icon="mdi:upload",
-                    translation_key="firmware_available",
-                    has_entity_name=True,
-                ),
-                device_id=entry.data["device_id"],
-            ),
-            CtekSensor(
-                coordinator=entry.runtime_data.coordinator,
-                entity_description=SensorEntityDescription(
-                    key="charging_session.transaction_id",
-                    name="Transaction ID",
-                    icon="mdi:id-card",
-                    translation_key="transaction_id",
-                    has_entity_name=True,
-                ),
-                device_id=entry.data["device_id"],
-            ),
+            #CtekSensor(
+            #    coordinator=entry.runtime_data.coordinator,
+            #    entity_description=SensorEntityDescription(
+            #        key="charging_session.transaction_id",
+            #        name="Transaction ID",
+            #        icon="mdi:id-card",
+            #        translation_key="transaction_id",
+            #        has_entity_name=True,
+            #        device_class=None,
+            #    ),
+            #    device_id=entry.data["device_id"],
+            #),
             CtekSensor(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
@@ -166,8 +160,8 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
         self._attr_native_value = self.coordinator.get_property(
             self.entity_description.key
         )
-        self._attr_extra_state_attributes: dict[str, Any] = {}
 
+    @cached_property # type: ignore[misc]
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         if self.device_class == SensorDeviceClass.DATE:
@@ -179,10 +173,20 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_native_value = self.coordinator.get_property(
+        val = self.coordinator.get_property(
             self.entity_description.key
         )
-        # Might not apply to all sensors?
-        if self._attr_native_value == "":
-            self._attr_native_value = None
+
+        if val is None or val == "":
+            val = None
+        elif self.device_class == SensorDeviceClass.DATE:
+            try:
+                val = parse(str(val))
+            except ParserError:
+                val = None
+            except OverflowError:
+                val = None
+
+        self._attr_native_value = val
+
         self.schedule_update_ha_state()

@@ -19,6 +19,7 @@ ignore = [
     "TD002", # Too many for now
     "TD003", # Too many for now
     "PLR0913", # meh.
+    "ERA001", # Ignore commented out code for now
 ]
 
 [lint.flake8-pytest-style]
