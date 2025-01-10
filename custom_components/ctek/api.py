@@ -6,52 +6,39 @@ import asyncio
 import hashlib
 import socket
 from datetime import datetime, timedelta
-from typing import Any
 
 import aiohttp
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import (
+    APP_PROFILE,
     CONTROL_URL,
     DEVICE_LIST_URL,
     LOGGER,
-    OAUTH2_CLIENT_ID,
-    OAUTH2_CLIENT_SECRET,
     OAUTH2_TOKEN_URL,
+    USER_AGENT,
+    CtekApiClientAuthenticationError,
+    CtekApiClientCommunicationError,
+    CtekApiClientError,
 )
 
 DEBUG = False
-
-
-class CtekApiClientError(Exception):
-    """Exception to indicate a general API error."""
-
-
-class CtekApiClientCommunicationError(
-    CtekApiClientError,
-):
-    """Exception to indicate a communication error."""
-
-
-class CtekApiClientAuthenticationError(
-    CtekApiClientError,
-):
-    """Exception to indicate an authentication error."""
+HTTP_UNAUTHORIZED = 401
+HTTP_FORBIDDEN = 403
 
 
 def _needs_refresh(response: aiohttp.ClientResponse) -> bool:
-    """Check if we need to update tokens."""
-    return response.status == 401
+    return bool(response.status == HTTP_UNAUTHORIZED)
 
 
 def _assert_success(response: dict) -> bool:
     """Check if we need to update tokens."""
-    return response["data"]["success"]
+    return bool(response["data"]["success"])
 
 
 def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
     """Verify that the response is valid."""
-    if response.status in (401, 403):
+    if response.status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
         msg = "Invalid credentials"
         raise CtekApiClientAuthenticationError(
             msg,
@@ -62,16 +49,22 @@ def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
 class CtekApiClient:
     """Sample API Client."""
 
+    _cache: dict | None
+
     def __init__(
         self,
         username: str,
         password: str,
+        client_id: str,
+        client_secret: str,
         session: aiohttp.ClientSession,
         refresh_token: str | None = None,
     ) -> None:
         """Sample API Client."""
         self._username = username
         self._password = password
+        self._client_id = client_id
+        self._client_secret = client_secret
         self._session = session
         self._access_token = None
         self._refresh_token = refresh_token
@@ -88,8 +81,8 @@ class CtekApiClient:
                     method="POST",
                     url=f"{OAUTH2_TOKEN_URL}",
                     data={
-                        "client_id": OAUTH2_CLIENT_ID,
-                        "client_secret": OAUTH2_CLIENT_SECRET,
+                        "client_id": self._client_id,
+                        "client_secret": self._client_secret,
                         "grant_type": "refresh_token",
                         "refresh_token": self._refresh_token,
                     },
@@ -105,8 +98,8 @@ class CtekApiClient:
                 method="POST",
                 url=f"{OAUTH2_TOKEN_URL}",
                 data={
-                    "client_id": OAUTH2_CLIENT_ID,
-                    "client_secret": OAUTH2_CLIENT_SECRET,
+                    "client_id": self._client_id,
+                    "client_secret": self._client_secret,
                     "grant_type": "password",
                     "password": self.hash_password(self._password),
                     "username": self._username,
@@ -118,7 +111,7 @@ class CtekApiClient:
         self._refresh_token = res["refresh_token"]
 
     async def start_charge(
-        self, device_id: str, connector_id: int = 1, override_schedule: bool = True
+        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True
     ) -> bool:
         """Set a configuration value."""
         LOGGER.debug(
@@ -130,7 +123,7 @@ class CtekApiClient:
             method="POST",
             url=CONTROL_URL,
             data={
-                "connector_id": 1,
+                "connector_id": connector_id,
                 "device_id": device_id,
                 "instruction": "START_CHARGING",
             },
@@ -138,9 +131,7 @@ class CtekApiClient:
         )
         LOGGER.debug(res["data"])
         _assert_success(res)
-        if res["data"]["instruction"]["accepted"]:
-            return True
-        return False
+        return bool(res["data"]["instruction"]["accepted"])
 
     async def set_config(self, device_id: str, name: str, value: str) -> None:
         """Set a configuration value."""
@@ -155,7 +146,7 @@ class CtekApiClient:
         LOGGER.debug(res["data"])
         _assert_success(res)
 
-    async def listDevices(self) -> dict:
+    async def list_devices(self) -> dict:
         """
         Asynchronously lists the devices.
 
@@ -166,10 +157,11 @@ class CtekApiClient:
             dict: The devices response received from the service.
 
         Raises:
-            Exception: If the response status is not 200, an exception is raised with the status code.
+            Exception: If the response status is not 200, an exception is raised with
+              the status code.
 
         """
-        current_time = datetime.now()
+        current_time = datetime.now(tz=DEFAULT_TIME_ZONE)
         if self._cache and (
             current_time - self._cache_timestamp < self._cache_duration
         ):
@@ -178,7 +170,7 @@ class CtekApiClient:
         res = await self._api_wrapper(method="GET", url=DEVICE_LIST_URL, auth=True)
 
         self._cache = res
-        self._cache_timestamp = datetime.now()
+        self._cache_timestamp = datetime.now(tz=DEFAULT_TIME_ZONE)
 
         return res
 
@@ -189,12 +181,13 @@ class CtekApiClient:
 
     async def _api_wrapper(
         self,
+        *,
         method: str,
         url: str,
         data: dict | None = None,
         headers: dict | None = None,
         auth: bool = False,
-    ) -> Any:
+    ) -> dict:
         """Get information from the API."""
         try:
             if headers is None:
@@ -202,8 +195,8 @@ class CtekApiClient:
             headers.update(
                 {
                     "Timezone": str(DEFAULT_TIME_ZONE),
-                    "User-Agent": "CTEK App/4.0.3 (Android 11; OnePlus; ONEPLUS A3003; OnePlus3)",
-                    "App-Profile": "ctek4",
+                    "User-Agent": USER_AGENT,
+                    "App-Profile": APP_PROFILE,
                 }
             )
             if auth:
@@ -227,7 +220,7 @@ class CtekApiClient:
                         json=data,
                     )
                 _verify_response_or_raise(response)
-                return await response.json()
+                return await response.json()  # type: ignore[no-any-return]
 
         except (TimeoutError, asyncio.CancelledError) as exception:
             msg = f"Timeout error during {method} - {exception}"
@@ -245,7 +238,7 @@ class CtekApiClient:
                 msg,
             ) from exception
 
-    def hash_password(self, password: str) -> str:
+    def hash_password(self, password: str | None) -> str:
         """Hash the password using SHA-256."""
         if password is None:
             err = "Password cannot be null"
