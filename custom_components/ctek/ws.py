@@ -20,6 +20,7 @@ class WebSocketClient:
     """WebSocket client for CTEK integration."""
 
     websocket: aiohttp.ClientWebSocketResponse | None
+
     def __init__(
         self, hass: HomeAssistant, entry: ConfigEntry, url: str, callback: Callable
     ) -> None:
@@ -113,7 +114,7 @@ class WebSocketClient:
                     LOGGER.error("WebSocket error: %s", err)
                     break
 
-    async def stop(self, event: Any=None) -> None:  # noqa: ARG002
+    async def stop(self, event: Any = None) -> None:  # noqa: ARG002
         """Stop the WebSocket client."""
         self._closed = True
         if self.websocket is not None:
