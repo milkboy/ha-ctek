@@ -33,17 +33,17 @@ class CtekConfigFlowContext(config_entries.ConfigFlowContext):  # type: ignore[m
     client: CtekApiClient
 
 
-class CtekConfigFlowHandler(config_entries.ConfigFlow):  # type: ignore[misc]
+class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[misc,call-arg]
     """Config flow."""
 
     DOMAIN = DOMAIN
-    VERSION = 2
+    VERSION = 3
 
     context: CtekConfigFlowContext
 
-    async def async_step_user(
+    async def async_step_user(  # type: ignore[no-untyped-def]
         self,
-        user_input: dict | None = None,
+        user_input=None,  # noqa: ANN001
     ) -> config_entries.ConfigFlowResult:
         """Handle a flow initialized by the user."""
         _errors = {}
@@ -152,76 +152,6 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow):  # type: ignore[misc]
                 "client_secret": self.context["client_secret"],
                 "refresh_token": self.context["client"].get_refresh_token(),
             },
-        )
-
-    async def async_step_reauth(
-        self,
-        user_input: Any = None,
-    ) -> config_entries.ConfigFlowResult:
-        """FIXME Handle reauthorization with the user."""
-        _errors = {}
-        if user_input is not None:
-            try:
-                await self._test_credentials(
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                    client_secret=user_input["client_secret"],
-                    client_id=user_input["client_id"],
-                )
-            except CtekApiClientAuthenticationError as exception:
-                LOGGER.warning(exception)
-                _errors["base"] = "auth"
-            except CtekApiClientCommunicationError as exception:
-                LOGGER.error(exception)
-                _errors["base"] = "connection"
-            except CtekApiClientError as exception:
-                LOGGER.exception(exception)
-                _errors["base"] = "unknown"
-            else:
-                unique_id = self.context.get("unique_id")
-                if unique_id is None:
-                    msg = "Unique ID not found in context"
-                    raise CtekApiClientError(msg)
-                entry = await self.async_set_unique_id(unique_id)
-                if entry is None:
-                    raise CtekApiClientError
-                self.hass.config_entries.async_update_entry(
-                    entry,
-                    data={
-                        **entry.data,
-                        CONF_USERNAME: user_input[CONF_USERNAME],
-                        CONF_PASSWORD: user_input[CONF_PASSWORD],
-                        "refresh_token": self.context["client"].get_refresh_token(),
-                    },
-                )
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(entry.entry_id)
-                )
-                return self.async_abort(reason="reauth_successful")
-
-        return self.async_show_form(
-            step_id="reauth",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_USERNAME,
-                        default=(user_input or {}).get(CONF_USERNAME, vol.UNDEFINED),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.TEXT,
-                        ),
-                    ),
-                    vol.Required(
-                        CONF_PASSWORD,
-                        default=(user_input or {}).get(CONF_PASSWORD, vol.UNDEFINED),
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.PASSWORD,
-                        ),
-                    ),
-                },
-            ),
-            errors=_errors,
         )
 
     async def _test_credentials(

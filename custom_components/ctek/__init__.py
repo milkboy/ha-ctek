@@ -33,6 +33,7 @@ async def async_setup_entry(
     entry: CtekConfigEntry,
 ) -> bool:
     """Set up this integration using UI."""
+    hass.data.setdefault(DOMAIN, {})
     coordinator = CtekDataUpdateCoordinator(
         hass=hass,
         update_interval=timedelta(hours=1),
@@ -46,7 +47,7 @@ async def async_setup_entry(
             client_id=entry.data["client_id"],
             client_secret=entry.data["client_secret"],
             session=async_get_clientsession(hass),
-            # refresh_token=entry.data.get("refresh_token", None),  # noqa: ERA001
+            # refresh_token=entry.data.get("refresh_token", None),
             refresh_token=None,  # getting 400 from the auth endpoint.. :shrug:
         ),
         integration=async_get_loaded_integration(hass, entry.domain),
@@ -65,8 +66,6 @@ async def async_setup_entry(
             },
         )
 
-    if hass.data.get(DOMAIN) is None:
-        hass.data[DOMAIN] = {}
     if hass.data[DOMAIN].get(entry.entry_id, None) is None:
         hass.data[DOMAIN][entry.entry_id] = {}
 

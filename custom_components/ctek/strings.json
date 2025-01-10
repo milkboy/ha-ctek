@@ -2,12 +2,13 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configure Daikin AC",
-        "description": "Enter the IP address of your Daikin AC.\n\nNote that API key and password are only used by BRP072Cxx and SKYFi devices respectively.",
+        "title": "Configure the CTEK API credentials",
+        "description": "Enter username+password and the OAuth credentials you got.",
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
-          "api_key": "[%key:common::config_flow::data::api_key%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "client_id": "Client id",
+          "client_secret": "Client secret"
         }
       }
     },

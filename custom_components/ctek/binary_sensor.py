@@ -28,6 +28,14 @@ DEVICE_STATUS_ENTITY_DESCRIPTIONS = (
         translation_key="online",
         has_entity_name=True,
     ),
+    BinarySensorEntityDescription(
+        key="firmware_update.update_available",
+        name="Firmware Update Available",
+        icon="mdi:upload",
+        translation_key="firmware_available",
+        has_entity_name=True,
+        device_class=BinarySensorDeviceClass.UPDATE,
+    ),
 )
 
 
