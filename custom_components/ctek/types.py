@@ -13,6 +13,29 @@ class ChargeStateEnum(Enum):
     SUSPENDED_EVSE = "SuspendedEVSE"
     SUSPENDED_EV = "SuspendedEV"
 
+    @staticmethod
+    def find(val: str) -> "ChargeStateEnum":
+        """
+        Find and return the corresponding ChargeStateEnum member for the given value.
+
+        Args:
+            val (str): The value to search for, which can be either the name or
+              the value of a ChargeStateEnum member.
+
+        Returns:
+            ChargeStateEnum: The corresponding ChargeStateEnum member if found.
+
+        Raises:
+            ValueError: If the given value does not correspond to any
+              ChargeStateEnum member.
+
+        """
+        for state in ChargeStateEnum:
+            if val in (state.value, state.name):
+                return state
+        msg = f"{val} is not a valid ChargeStateEnum value"
+        raise ValueError(msg)
+
 
 class StatusReasonEnum(Enum):
     """Status reason enum."""

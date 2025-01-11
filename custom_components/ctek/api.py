@@ -125,10 +125,12 @@ class CtekApiClient:
     ) -> InstructionResponseType:
         """Set a configuration value."""
         LOGGER.debug(
-            "Trying to start charge on %s (Override schedule: %s)",
+            "Trying to start charge on %s (Resume: %s, Override schedule: %s)",
             device_id,
+            "true" if resume_charging else "false",
             "true" if override_schedule else "false",
         )
+        # Might additionally need START_CHARGING if a schedule is active
         res = await self._api_wrapper(
             method="POST",
             url=CONTROL_URL,
@@ -137,7 +139,7 @@ class CtekApiClient:
                 "device_id": device_id,
                 "instruction": "RESUME_CHARGING"
                 if resume_charging
-                else "START_CHARGING",
+                else "START_TRANSACTION",
             },
             auth=True,
         )
@@ -320,7 +322,7 @@ class CtekApiClient:
 
         """
         data: InstructionResponseType = {
-            "device_id": res.get("data", {}).get("device_id"),
+            "device_id": res.get("device_id", ""),
             "information": res.get("information", {}),
             "instruction": {
                 "connector_id": res.get("instruction", {}).get("connector_id"),
@@ -342,6 +344,7 @@ class CtekApiClient:
                 "user_id_is_owner": res.get("instruction", {}).get("user_id_is_owner"),
             },
             "ocpp": {},
+            "accepted": res.get("accepted"),
         }
 
         return data

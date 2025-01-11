@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
     from .data import CtekConfigEntry
 
-from .data import ChargingSessionType, ConnectorType, DataType
+from .data import ChargingSessionType, ConnectorType, DataType, InstructionResponseType
 from .ws import WebSocketClient
 
 
@@ -185,7 +185,7 @@ class CtekDataUpdateCoordinator(
                     else parse(data.get("updateDate"))
                 )
                 c["status_reason"] = data.get("statusReason")
-                c["current_status"] = data.get("status")
+                c["current_status"] = ChargeStateEnum.find(data.get("status"))
                 c["start_date"] = (
                     None
                     if data.get("startDate") in (None, "")
@@ -379,7 +379,7 @@ class CtekDataUpdateCoordinator(
             if ret.get(str(c["id"]), None) is not None:
                 old = copy.deepcopy(ret[str(c["id"])])
             new: ConnectorType = {
-                "current_status": c.get("current_status"),
+                "current_status": ChargeStateEnum.find(c.get("current_status")),
                 "start_date": None
                 if c.get("start_date") in (None, "")
                 else parse(c.get("start_date")),
@@ -440,6 +440,7 @@ class CtekDataUpdateCoordinator(
 
         If the charge was previously stopped, or maybe waiting for a schedule, we need
         to send a different command than if the charger is waiting for authorization.
+
         """
         # set meter value reporting to 30 s
         meter_value_interval = self.get_configuration(
@@ -449,21 +450,20 @@ class CtekDataUpdateCoordinator(
             await self.set_config("configs.MeterValueSampleInterval", "30")
 
         # send start command
+        # SuspendedEVSE -> needs to resume
+        # Preparing -> needs authorize
         await self.config_entry.runtime_data.client.start_charge(
             device_id=self.device_id,
             connector_id=connector_id,
-            resume_charging=self.data.get("device_status", {})  # type: ignore[call-overload]
-            .get("connectors", {})
-            .get(str(connector_id), {})
-            .get("current_status")
+            resume_charging=await self.get_connector_status(connector_id=connector_id)
             == ChargeStateEnum.SUSPENDED_EVSE,
         )
 
+        # FIXME: check the result
         async def handle_car_quirks(tries: int = 2) -> None:
             if (
-                self.data["device_status"]["connectors"][str(connector_id)][
-                    "current_status"
-                ]
+                tries > 0
+                and await self.get_connector_status(connector_id)
                 == ChargeStateEnum.SUSPENDED_EV
             ):
                 max_current = self.get_configuration("configs.CurrentMaxAssignment")
@@ -482,23 +482,41 @@ class CtekDataUpdateCoordinator(
 
         await self.start_delayed_operation(15, handle_car_quirks)
 
-    async def stop_charge(self, connector_id: int) -> None:
+    async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
         LOGGER.info(f"Stopping charge on connector {connector_id}")
         # Check connector state
         # Fixme: check that a charge is actually ongoing
-        await self.config_entry.runtime_data.client.stop_charge(
-            device_id=self.device_id,
-            connector_id=connector_id,
-            resume_schedule=bool(
-                self.data.get("device_status", {})  # type: ignore[call-overload]
-                .get("connectors", {})
-                .get(str(connector_id), {})
-                .get("has_active_schedule", False)
-            ),
-            # and self.data.get("device_status")
-            # .get("connectors", {})
-            # .get(str(connector_id), {})
-            # .get("current_status")
-            # == ChargeStateEnum.SUSPENDED_EVSE.value,
+        res: InstructionResponseType = (
+            await self.config_entry.runtime_data.client.stop_charge(
+                device_id=self.device_id,
+                connector_id=connector_id,
+                resume_schedule=bool(
+                    self.data.get("device_status", {})  # type: ignore[call-overload]
+                    .get("connectors", {})
+                    .get(str(connector_id), {})
+                    .get("has_active_schedule", False)
+                ),
+                # and self.data.get("device_status")
+                # .get("connectors", {})
+                # .get(str(connector_id), {})
+                # .get("current_status")
+                # == ChargeStateEnum.SUSPENDED_EVSE.value,
+            )
         )
+        return res.get("accepted")
+
+    async def get_connector_status(self, connector_id: int) -> ChargeStateEnum:
+        """
+        Retrieve the status of a specific connector.
+
+        Args:
+            connector_id (int): The ID of the connector to retrieve the status for.
+
+        Returns:
+            ChargeStateEnum: The current status of the specified connector.
+
+        """
+        return self.data["device_status"]["connectors"][str(connector_id)][
+            "current_status"
+        ]

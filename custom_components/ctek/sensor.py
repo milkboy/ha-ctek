@@ -30,28 +30,31 @@ if TYPE_CHECKING:
     from .data import CtekConfigEntry
 
 
-def status_icon(status):
-    """Get the icon corresponding to a given charge state.
+def status_icon(status: ChargeStateEnum) -> str:
+    """
+    Get the icon corresponding to a given charge state.
 
     Args:
         status (ChargeStateEnum): The charge state for which to get the icon.
 
     Returns:
-        str: The icon associated with the given charge state. If the status is not recognized, returns "mdi:ev-station".
+        str: The icon associated with the given charge state.
+          If the status is not recognized, returns "mdi:ev-station".
 
     """
     return {
-        ChargeStateEnum.AVAILABLE.value: "mdi:power-plug-off",
-        ChargeStateEnum.CHARGING.value: "mdi:battery-charging-medium",
-        ChargeStateEnum.SUSPENDED_EVSE.value: "mdi:timer-pause",
-        ChargeStateEnum.SUSPENDED_EV.value: "mdi:battery",
-        ChargeStateEnum.PREPARING.value: "mdi:battery-alert",
-        ChargeStateEnum.FINISHING.value: "mdi:pause-octagon",
+        ChargeStateEnum.AVAILABLE: "mdi:power-plug-off",
+        ChargeStateEnum.CHARGING: "mdi:battery-charging-medium",
+        ChargeStateEnum.SUSPENDED_EVSE: "mdi:timer-pause",
+        ChargeStateEnum.SUSPENDED_EV: "mdi:battery",
+        ChargeStateEnum.PREPARING: "mdi:battery-alert",
+        ChargeStateEnum.FINISHING: "mdi:pause-octagon",
     }.get(status, "mdi:ev-station")
 
 
-def status_icon_color(status):
-    """Return the color code for the given status.
+def status_icon_color(status: ChargeStateEnum) -> str:  # noqa: ARG001
+    """
+    Return the color code for the given status.
 
     Args:
         status (str): The status for which the color code is required.
@@ -142,7 +145,7 @@ async def async_setup_entry(
                         key=f"device_status.connectors.{e}.current_status",
                         name=f"Connector {e} Status",
                         device_class=SensorDeviceClass.ENUM,
-                        options=[e.value for e in ChargeStateEnum],
+                        options=list(ChargeStateEnum),
                         translation_key="connector.status",
                         translation_placeholders={"conn": str(e)},
                         has_entity_name=True,
@@ -203,7 +206,7 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
         #    self.entity_description.key
         # )
 
-    @cached_property  # type: ignore[misc]
+    @cached_property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         if self.device_class == SensorDeviceClass.DATE:
@@ -219,6 +222,8 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
 
         if val is None or val == "":
             val = None
+            if self._numeric_state_expected:
+                val = 0
         elif self.device_class == SensorDeviceClass.DATE and isinstance(val, str):
             try:
                 val = parse(str(val))
