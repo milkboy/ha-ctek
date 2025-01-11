@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import socket
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 import aiohttp
 from homeassistant.exceptions import HomeAssistantError
@@ -22,6 +23,9 @@ from .const import (
     CtekApiClientCommunicationError,
     CtekApiClientError,
 )
+
+if TYPE_CHECKING:
+    from custom_components.ctek.data import InstructionResponseType
 
 DEBUG = False
 HTTP_UNAUTHORIZED = 401
@@ -112,8 +116,13 @@ class CtekApiClient:
         self._refresh_token = res["refresh_token"]
 
     async def start_charge(
-        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True, resume_charging: bool=False
-    ) -> bool:
+        self,
+        *,
+        device_id: str,
+        connector_id: int = 1,
+        override_schedule: bool = True,
+        resume_charging: bool = False,
+    ) -> InstructionResponseType:
         """Set a configuration value."""
         LOGGER.debug(
             "Trying to start charge on %s (Override schedule: %s)",
@@ -126,51 +135,33 @@ class CtekApiClient:
             data={
                 "connector_id": connector_id,
                 "device_id": device_id,
-                "instruction": "START_CHARGING",
+                "instruction": "RESUME_CHARGING"
+                if resume_charging
+                else "START_CHARGING",
             },
             auth=True,
         )
         if res.get("data", {}).get("error_code", None) is not None:
-            msg = f"{res.get("data", {}).get("error_code", None)}: {res.get("data", {}).get("error_message", None)}"
-            raise HomeAssistantError(f"Failed to start charging: {msg}")
+            error_code = res.get("data", {}).get("error_code", None)
+            error_message = res.get("data", {}).get("error_message", None)
+            msg = f"Failed to start charging: {error_code}: {error_message}"
+            raise HomeAssistantError(msg)
         LOGGER.debug(res["data"])
         # _assert_success(res)
-        return bool(res.get("data", {}).get("instruction", {}).get("accepted", False))
-
-    async def start_charge(
-        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True, resume_charging: bool=False
-    ) -> bool:
-        """Set a configuration value."""
-        LOGGER.debug(
-            "Trying to start charge on %s (Override schedule: %s)",
-            device_id,
-            "true" if override_schedule else "false",
-        )
-        res = await self._api_wrapper(
-            method="POST",
-            url=CONTROL_URL,
-            data={
-                "connector_id": connector_id,
-                "device_id": device_id,
-                "instruction": "START_CHARGING",
-            },
-            auth=True,
-        )
-        if res.get("data", {}).get("error_code", None) is not None:
-            msg = f"{res.get("data", {}).get("error_code", None)}: {res.get("data", {}).get("error_message", None)}"
-            raise HomeAssistantError(f"Failed to start charging: {msg}")
-        LOGGER.debug(res["data"])
-        # _assert_success(res)
-        return bool(res.get("data", {}).get("instruction", {}).get("accepted", False))
+        return self.parse_instruction_response(res)
 
     async def stop_charge(
-        self, *, device_id: str, connector_id: int = 1, override_schedule: bool = True, resume_schedule: bool=False
-    ) -> bool:
+        self,
+        *,
+        device_id: str,
+        connector_id: int = 1,
+        resume_schedule: bool = False,
+    ) -> InstructionResponseType:
         """Set a configuration value."""
         LOGGER.debug(
-            "Trying to start charge on %s (Override schedule: %s)",
+            "Trying to stop charge on %s (Resume schedule: %s)",
             device_id,
-            "true" if override_schedule else "false",
+            "true" if resume_schedule else "false",
         )
         res = await self._api_wrapper(
             method="POST",
@@ -178,16 +169,20 @@ class CtekApiClient:
             data={
                 "connector_id": connector_id,
                 "device_id": device_id,
-                "instruction": "RESUME_SCHEDULE" if resume_schedule else "STOP_CHARGING",
+                "instruction": "RESUME_SCHEDULE"
+                if resume_schedule
+                else "PAUSE_CHARGING",
             },
             auth=True,
         )
         if res.get("data", {}).get("error_code", None) is not None:
-            msg = f"{res.get("data", {}).get("error_code", None)}: {res.get("data", {}).get("error_message", None)}"
-            raise HomeAssistantError(f"Failed to start charging: {msg}")
+            error_code = res.get("data", {}).get("error_code", None)
+            error_message = res.get("data", {}).get("error_message", None)
+            msg = f"Failed to stop charging: {error_code}: {error_message}"
+            raise HomeAssistantError(msg)
         LOGGER.debug(res["data"])
         # _assert_success(res)
-        return bool(res.get("data", {}).get("instruction", {}).get("accepted", False))
+        return self.parse_instruction_response(res["data"])
 
     async def set_config(self, device_id: str, name: str, value: str) -> None:
         """Set a configuration value."""
@@ -311,3 +306,42 @@ class CtekApiClient:
     def get_refresh_token(self) -> str | None:
         """Get the access token."""
         return self._refresh_token
+
+    def parse_instruction_response(self, res: dict) -> InstructionResponseType:
+        """
+        Parse the instruction response from a given dictionary.
+
+        Args:
+            res (dict): The response dictionary containing instruction data.
+
+        Returns:
+            InstructionResponseType: A dictionary containing parsed instruction
+              response data.
+
+        """
+        data: InstructionResponseType = {
+            "device_id": res.get("data", {}).get("device_id"),
+            "information": res.get("information", {}),
+            "instruction": {
+                "connector_id": res.get("instruction", {}).get("connector_id"),
+                "device_id": res.get("instruction", {}).get("device_id"),
+                "info": {
+                    "firmware": res.get("instruction", {})
+                    .get("info", {})
+                    .get("firmware"),
+                    "id": res.get("instruction", {}).get("info", {}).get("id"),
+                    "key": res.get("instruction", {}).get("info", {}).get("key"),
+                    "units": res.get("instruction", {}).get("info", {}).get("units"),
+                    "value": res.get("instruction", {}).get("info", {}).get("value"),
+                },
+                "id": res.get("instruction", {}).get("id"),
+                "instruction": res.get("instruction", {}).get("instruction"),
+                "timeout": res.get("instruction", {}).get("timeout"),
+                "transaction_id": res.get("instruction", {}).get("transaction_id"),
+                "user_id": res.get("instruction", {}).get("user_id"),
+                "user_id_is_owner": res.get("instruction", {}).get("user_id_is_owner"),
+            },
+            "ocpp": {},
+        }
+
+        return data

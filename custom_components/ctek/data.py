@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TYPE_CHECKING, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from homeassistant.loader import Integration
 
     from .api import CtekApiClient
@@ -69,7 +70,7 @@ class ConnectorType(TypedDict):
 
     # TODO: should the dates be handled as dates?
 
-    current_status: list[ChargeStateEnum]
+    current_status: ChargeStateEnum
     update_date: datetime | None
     status_reason: StatusReasonEnum
     start_date: datetime | None
@@ -114,3 +115,35 @@ class DataType(TypedDict):
     device_status: DeviceStatusType
     device_info: DeviceInfoType
     firmware_update: FirmwareUpdateType
+
+class InstructionInfoType(TypedDict):
+    """Instruction info type."""
+
+    value: str | None
+    key: str | None
+    firmware: str | None
+    id: str | None
+    units: str | None
+
+
+class InstructionType(TypedDict):
+    """Instruction type."""
+
+    id: str
+    user_id: int
+    device_id: str
+    connector_id: int
+    instruction: str
+    transaction_id: int
+    user_id_is_owner: bool
+    timeout: datetime
+    info: InstructionInfoType
+
+
+class InstructionResponseType(TypedDict):
+    """Schema for the data."""
+
+    device_id: str
+    instruction: InstructionType
+    information: dict
+    ocpp: dict
