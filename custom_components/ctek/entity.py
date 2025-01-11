@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from copy import copy
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.helpers import device_registry as dr
@@ -26,16 +25,17 @@ def callback(func: Callable[..., Any]) -> Callable[..., Any]:
 class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):  # type: ignore[misc]
     """CtekEntity class."""
 
-    _icon_func: Callable | None
-    _icon_color_func: Callable | None
+    _icon_func: Callable[[Any], str] | None
+    _icon_color_func: Callable[[Any], str] | None
 
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,
         device_id: str,
         entity_description: EntityDescription,
-        icon_func: Callable | None = None,
-        icon_color_func: Callable | None = None, # FIXME: This is not working currently
+        icon_func: Callable[[Any], str] | None = None,
+        icon_color_func: Callable[[Any], str]
+        | None = None,  # FIXME: This is not working currently
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
@@ -60,24 +60,15 @@ class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):  # type:
         LOGGER.error("Entity update should be handled in subclass %s", self.name)
 
     @property
-    def state_attributes(self):
-        """Return the state attributes."""
-        attrs = {}
-        if self._icon_color_func is not None:
-            attrs["icon_color"] = self._icon_color_func(self.state)
-        return attrs
-
-    @property
     def icon(self) -> str | None:
         """Return dynamic icon."""
         if self._icon_func is not None:
             return self._icon_func(self.state)
         if hasattr(self, "_attr_icon"):
-            return self._attr_icon
+            return self._attr_icon # type: ignore[no-any-return]
         if hasattr(self, "entity_description"):
-            return self.entity_description.icon
+            return self.entity_description.icon # type: ignore[no-any-return]
         return None
-
 
     # @property
     # def state_attributes(self) -> dict:

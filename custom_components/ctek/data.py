@@ -116,6 +116,7 @@ class DataType(TypedDict):
     device_info: DeviceInfoType
     firmware_update: FirmwareUpdateType
 
+
 class InstructionInfoType(TypedDict):
     """Instruction info type."""
 
@@ -147,3 +148,4 @@ class InstructionResponseType(TypedDict):
     instruction: InstructionType
     information: dict
     ocpp: dict
+    accepted: bool | None
