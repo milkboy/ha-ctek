@@ -25,13 +25,39 @@
   },
   "entity": {
     "sensor": {
-      "inside_temperature": {
-        "name": "Inside temperature"
+      "connector.start_date": {
+        "name": "Connector {conn} Start date"
+      },
+      "connector.status": {
+        "name": "Connector {conn} status",
+        "state": {
+          "ChargeStateEnum.SUSPENDED_EV": "Suspended (car)",
+          "ChargeStateEnum.SUSPENDED_EVSE": "Suspended (EVSE)",
+          "ChargeStateEnum.AVAILABLE": "Available",
+          "ChargeStateEnum.CHARGING": "Charging",
+          "ChargeStateEnum.FINISHING": "Finishing",
+          "ChargeStateEnum.PREPARING": "Auth required"
+        }
+      },
+      "current": {
+        "name": "Current"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "wh_consumed": {
+        "name": "Session charged Wh"
+      },
+      "voltage": {
+        "name": "Voltage"
       }
     },
     "switch": {
       "require_auth": {
         "name": "Require authorization before charging"
+      },
+      "connector.charging": {
+        "name": "Connector {conn} charging"
       }
     }
   }

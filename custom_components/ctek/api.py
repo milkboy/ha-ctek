@@ -25,7 +25,7 @@ from .const import (
 )
 
 if TYPE_CHECKING:
-    from custom_components.ctek.data import InstructionResponseType
+    from .data import InstructionResponseType
 
 DEBUG = False
 HTTP_UNAUTHORIZED = 401
@@ -38,7 +38,12 @@ def _needs_refresh(response: aiohttp.ClientResponse) -> bool:
 
 def _assert_success(response: dict) -> bool:
     """Check if we need to update tokens."""
-    return bool(response.get("data", {}).get("success"))
+    val: bool = response.get("data", {}).get("success", False)
+    if val is False:
+        LOGGER.error(response)
+        msg = "Operation failed"
+        raise HomeAssistantError(msg)
+    return True
 
 
 def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:

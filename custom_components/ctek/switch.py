@@ -10,10 +10,9 @@ from homeassistant.components.switch import (
     SwitchEntityDescription,
 )
 
-from custom_components.ctek.types import ChargeStateEnum
-
 from .const import LOGGER
 from .entity import CtekEntity, callback
+from .types import ChargeStateEnum
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -25,7 +24,6 @@ if TYPE_CHECKING:
 ENTITY_DESCRIPTIONS = (
     SwitchEntityDescription(
         key="configs.AuthMode",
-        name="Require authorization before starting charge",
         translation_key="require_auth",
         icon="mdi:lock",
         has_entity_name=True,
@@ -54,7 +52,6 @@ async def async_setup_entry(
                     coordinator=entry.runtime_data.coordinator,
                     entity_description=SwitchEntityDescription(
                         key=f"device_status.connectors.{e}.current_status",
-                        name=f"Connector {e} Charging",
                         icon="mdi:ev-station",
                         device_class=SwitchDeviceClass.SWITCH,
                         translation_key="connector.charging",
@@ -96,7 +93,7 @@ class CtekSwitch(CtekEntity, SwitchEntity):  # type: ignore[misc]
         if self.coordinator.data is None:
             return False
         val = self.coordinator.get_property(self.entity_description.key)
-        return bool(val)
+        return val in (True, "true")
 
     async def async_turn_on(self, **_: Any) -> None:
         """Turn on the switch."""
