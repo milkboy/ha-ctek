@@ -31,12 +31,12 @@
       "connector_status": {
         "name": "Connector {conn} status",
         "state": {
-          "ChargeStateEnum.SUSPENDED_EV": "Suspended (car)",
-          "ChargeStateEnum.SUSPENDED_EVSE": "Suspended (EVSE)",
-          "ChargeStateEnum.AVAILABLE": "Available",
-          "ChargeStateEnum.CHARGING": "Charging",
-          "ChargeStateEnum.FINISHING": "Finishing",
-          "ChargeStateEnum.PREPARING": "Auth required"
+          "SUSPENDED_EV": "Suspended (car)",
+          "SUSPENDED_EVSE": "Suspended (EVSE)",
+          "AVAILABLE": "Available",
+          "CHARGING": "Charging",
+          "FINISHING": "Finishing",
+          "PREPARING": "Auth required"
         }
       },
       "current": {

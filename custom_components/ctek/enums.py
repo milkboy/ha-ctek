@@ -36,6 +36,10 @@ class ChargeStateEnum(Enum):
         msg = f"{val} is not a valid ChargeStateEnum value"
         raise ValueError(msg)
 
+    def __str__(self) -> str:
+        """Return the name of the ChargeStateEnum member."""
+        return self.name
+
 
 class StatusReasonEnum(Enum):
     """Status reason enum."""

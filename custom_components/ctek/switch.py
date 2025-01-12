@@ -110,14 +110,17 @@ class CtekSwitch(CtekEntity, SwitchEntity):  # type: ignore[misc]
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        val = self.coordinator.get_property(self.entity_description.key) in (
+            True,
+            "true",
+        )
         LOGGER.debug(
-            "Updating %s: %s -> %s",
+            "Updating %s: %s -> %s (%s)",
             self.name,
             self._attr_is_on,
             self.coordinator.get_property(self.entity_description.key),
+            val,
         )
-        val = self.coordinator.get_property(self.entity_description.key)
-        self._attr_is_on = val in (True, "true")
         self.schedule_update_ha_state()
 
 
@@ -157,13 +160,18 @@ class CtekConnectorSwitch(CtekSwitch):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        state = self.coordinator.get_property(
+            f"device_status.connectors.{self._connector_id}.current_status"
+        )
         LOGGER.debug(
-            "Updating %s: %s -> %s",
+            "Updating %s: %s -> %s (%s)",
             self.name,
             self._attr_is_on,
             self.coordinator.get_property(self.entity_description.key),
+            state,
         )
-        self._attr_is_on = self.coordinator.get_property(
-            f"device_status.connectors.{self._connector_id}.current_status"
-        ) in (ChargeStateEnum.CHARGING, ChargeStateEnum.SUSPENDED_EV)
+        # self._attr_is_on = state in (
+        #    ChargeStateEnum.CHARGING,
+        #    ChargeStateEnum.SUSPENDED_EV,
+        # )
         self.schedule_update_ha_state()
