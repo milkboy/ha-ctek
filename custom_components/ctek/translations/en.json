@@ -1,38 +1,64 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Device is already configured",
-            "cannot_connect": "Failed to connect"
-        },
-        "error": {
-            "api_password": "Invalid authentication, use either API Key or Password.",
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
-        },
-        "step": {
-            "user": {
-                "data": {
-                    "client_id": "Client id",
-                    "client_secret": "Client secret",
-                    "password": "Password",
-                    "username": "Username"
-                },
-                "description": "Enter username+password and the OAuth credentials you got.",
-                "title": "Configure the CTEK API credentials"
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured",
+      "cannot_connect": "Failed to connect"
     },
-    "entity": {
-        "sensor": {
-            "inside_temperature": {
-                "name": "Inside temperature"
-            }
+    "error": {
+      "api_password": "Invalid authentication, use either API Key or Password.",
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "client_id": "Client id",
+          "client_secret": "Client secret",
+          "password": "Password",
+          "username": "Username"
         },
-        "switch": {
-            "require_auth": {
-                "name": "Require authorization before charging"
-            }
-        }
+        "description": "Enter username+password and the OAuth credentials you got.",
+        "title": "Configure the CTEK API credentials"
+      }
     }
+  },
+  "entity": {
+    "sensor": {
+      "connector.start_date": {
+        "name": "Connector {conn} Start date"
+      },
+      "connector.status": {
+        "name": "Connector {conn} status",
+        "state": {
+          "ChargeStateEnum.AVAILABLE": "Available",
+          "ChargeStateEnum.CHARGING": "Charging",
+          "ChargeStateEnum.FINISHING": "Finishing",
+          "ChargeStateEnum.PREPARING": "Auth required",
+          "ChargeStateEnum.SUSPENDED_EV": "Suspended (car)",
+          "ChargeStateEnum.SUSPENDED_EVSE": "Suspended (EVSE)"
+        }
+      },
+      "current": {
+        "name": "Current"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "voltage": {
+        "name": "Voltage"
+      },
+      "wh_consumed": {
+        "name": "Session charged Wh"
+      }
+    },
+    "switch": {
+      "connector.charging": {
+        "name": "Connector {conn} charging"
+      },
+      "require_auth": {
+        "name": "Require authorization before charging"
+      }
+    }
+  }
 }

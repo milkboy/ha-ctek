@@ -90,7 +90,6 @@ async def async_setup_entry(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
                     key="charging_session.watt_hours_consumed",
-                    name="Watt Hours Consumed",
                     icon="mdi:power-plug-battery",
                     device_class=SensorDeviceClass.ENERGY,
                     native_unit_of_measurement="Wh",
@@ -103,7 +102,6 @@ async def async_setup_entry(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
                     key="charging_session.momentary_voltage",
-                    name="Voltage",
                     translation_key="voltage",
                     icon="mdi:gauge",
                     device_class=SensorDeviceClass.VOLTAGE,
@@ -116,7 +114,6 @@ async def async_setup_entry(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
                     key="charging_session.momentary_current",
-                    name="Current",
                     icon="mdi:gauge",
                     translation_key="current",
                     device_class=SensorDeviceClass.CURRENT,
@@ -129,7 +126,6 @@ async def async_setup_entry(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
                     key="charging_session.momentary_power",
-                    name="Power",
                     translation_key="power",
                     icon="mdi:gauge",
                     device_class=SensorDeviceClass.POWER,
@@ -143,9 +139,7 @@ async def async_setup_entry(
                     coordinator=entry.runtime_data.coordinator,
                     entity_description=SensorEntityDescription(
                         key=f"device_status.connectors.{e}.current_status",
-                        name=f"Connector {e} Status",
                         device_class=SensorDeviceClass.ENUM,
-                        options=list(ChargeStateEnum),
                         translation_key="connector.status",
                         translation_placeholders={"conn": str(e)},
                         has_entity_name=True,
@@ -163,7 +157,6 @@ async def async_setup_entry(
                     coordinator=entry.runtime_data.coordinator,
                     entity_description=SensorEntityDescription(
                         key=f"device_status.connectors.{e}.start_date",
-                        name=f"Connector {e} Start date",
                         icon="mdi:calendar",
                         device_class=SensorDeviceClass.DATE,
                         translation_key="connector.start_date",
