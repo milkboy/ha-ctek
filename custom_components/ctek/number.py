@@ -1,16 +1,27 @@
+"""Module to define Ctek number entities for Home Assistant."""
+
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import UnitOfElectricCurrent
+from homeassistant.const import EntityCategory, UnitOfElectricCurrent
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import LOGGER
 from .coordinator import CtekDataUpdateCoordinator
 from .data import CtekConfigEntry
 from .entity import CtekEntity, callback
 
+
+class CtekNumberEntityDescription(NumberEntityDescription):  # type: ignore[misc]
+    """Description for Ctek number entity."""
+
+    step: int = 1
+    min_value: int = 0
+    max_value: int = 10
+
+
 DEVICE_STATUS_ENTITY_DESCRIPTIONS = (
-    NumberEntityDescription(
+    CtekNumberEntityDescription(
         key="configs.CurrentMaxAssignment",
         name="Maximum Current",
         translation_key="max_current",
@@ -20,8 +31,10 @@ DEVICE_STATUS_ENTITY_DESCRIPTIONS = (
         entity_category=EntityCategory.CONFIG,
         max_value=16,
         min_value=6,
+        icon="mdi:current-ac",
     ),
 )
+
 
 async def async_setup_entry(
     hass: HomeAssistant,  # noqa: ARG001 Unused function argument: `hass`
@@ -39,15 +52,22 @@ async def async_setup_entry(
     )
 
 
-class CtekNumberSetting(CtekEntity, NumberEntity):
+class CtekNumberSetting(CtekEntity, NumberEntity):  # type: ignore[misc]
     """Number entity to control maximum current."""
 
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,
-        entity_description: NumberEntityDescription,
+        entity_description: CtekNumberEntityDescription,
         device_id: str,
-    ):
+    ) -> None:
+        """
+        Initialize the number entity.
+
+        :param coordinator: The data update coordinator.
+        :param entity_description: The description of the entity.
+        :param device_id: The ID of the device.
+        """
         super().__init__(
             coordinator=coordinator,
             device_id=device_id,
@@ -61,27 +81,27 @@ class CtekNumberSetting(CtekEntity, NumberEntity):
         self._attr_native_max_value = entity_description.max_value
         self._attr_native_step = entity_description.step
 
-        self._attr_native_unit_of_measurement = entity_description.native_unit_of_measurement
+        self._attr_native_unit_of_measurement = (
+            entity_description.native_unit_of_measurement
+        )
         self._attr_entity_category = entity_description.entity_category
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         try:
             # Your code to actually set the value on the device
-            await self.coordinator.set_config(name=self.entity_description.key, value=int(value))
-            self._attr_native_value = value
+            await self.coordinator.set_config(
+                name=self.entity_description.key, value=str(int(value))
+            )
+            self._attr_native_value = int(value)
         except Exception as ex:
-            raise HomeAssistantError(f"Failed to set maximum current: {ex}") from ex
-
+            msg = f"Failed to set maximum current: {ex}"
+            LOGGER.error(msg)
+            raise HomeAssistantError(msg) from ex
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         val = self.coordinator.get_property(self.entity_description.key)
-        self._attr_native_value = int(val)
+        self._attr_native_value = int(val) if val is not None else 0
         self.schedule_update_ha_state()
-
-    @property
-    def icon(self):
-        """Return the icon."""
-        return "mdi:current-ac"
