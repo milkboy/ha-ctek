@@ -12,7 +12,7 @@ from homeassistant.components.switch import (
 
 from .const import LOGGER
 from .entity import CtekEntity, callback
-from .types import ChargeStateEnum
+from .enums import ChargeStateEnum
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant

@@ -88,7 +88,7 @@ class WebSocketClient:
                     if msg.type == aiohttp.WSMsgType.TEXT:
                         try:
                             await self.callback(message=msg.data)
-                        except Exception as err:  # noqa: BLE001
+                        except Exception:  # noqa: BLE001
                             LOGGER.error("Error processing message: %s", msg)
 
                     elif msg.type == aiohttp.WSMsgType.ERROR:

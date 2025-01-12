@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from .api import CtekApiClient
     from .coordinator import CtekDataUpdateCoordinator
-    from .types import ChargeStateEnum, StatusReasonEnum
+    from .enums import ChargeStateEnum, StatusReasonEnum
 
 type CtekConfigEntry = ConfigEntry[CtekData]
 

@@ -17,7 +17,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import CtekApiClientAuthenticationError, CtekApiClientError
 from .const import DOMAIN, LOGGER, WS_URL
-from .types import ChargeStateEnum
+from .enums import ChargeStateEnum
 
 if TYPE_CHECKING:
     import asyncio
