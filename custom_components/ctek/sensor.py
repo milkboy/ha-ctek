@@ -159,7 +159,7 @@ async def async_setup_entry(
                         key=f"device_status.connectors.{e}.start_date",
                         icon="mdi:calendar",
                         device_class=SensorDeviceClass.DATE,
-                        translation_key="connector.start_date",
+                        translation_key="connector_start_date",
                         translation_placeholders={"conn": str(e)},
                         has_entity_name=True,
                     ),
