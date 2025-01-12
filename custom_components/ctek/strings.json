@@ -28,15 +28,18 @@
       "connector_start_date": {
         "name": "Connector {conn} Start date"
       },
+      "transaction_id": {
+        "name": "Transaction ID"
+      },
       "connector_status": {
         "name": "Connector {conn} status",
         "state": {
-          "SUSPENDED_EV": "Suspended (car)",
-          "SUSPENDED_EVSE": "Suspended (EVSE)",
-          "AVAILABLE": "Available",
-          "CHARGING": "Charging",
-          "FINISHING": "Finishing",
-          "PREPARING": "Auth required"
+          "SuspendedEV": "Suspended (car)",
+          "SuspendedEVSE": "Suspended (EVSE)",
+          "Available": "Available",
+          "Charging": "Charging",
+          "Finishing": "Finishing",
+          "Preparing": "Auth required"
         }
       },
       "current": {

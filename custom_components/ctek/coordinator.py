@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
@@ -460,44 +460,43 @@ class CtekDataUpdateCoordinator(
         if meter_value_interval not in (30, "30"):
             await self.set_config("configs.MeterValueSampleInterval", "30")
 
+        await self.set_config("configs.CurrentMaxAssignment", "10")
+
         # send start command
         # SuspendedEVSE -> needs to resume
         # Preparing -> needs authorize
-        await self.config_entry.runtime_data.client.start_charge(
-            device_id=self.device_id,
-            connector_id=connector_id,
-            resume_charging=await self.get_connector_status(connector_id=connector_id)
-            == ChargeStateEnum.SUSPENDED_EVSE,
+        res: InstructionResponseType = (
+            await self.config_entry.runtime_data.client.start_charge(
+                device_id=self.device_id,
+                connector_id=connector_id,
+                resume_charging=await self.get_connector_status(
+                    connector_id=connector_id
+                )
+                == ChargeStateEnum.SUSPENDED_EVSE,
+            )
         )
 
-        # FIXME: check the result
+        if not res["accepted"]:
+            msg = "Start charge failed?"
+            LOGGER.error(msg)
+            raise HomeAssistantError(msg)
+
         async def handle_car_quirks(tries: int = 2) -> None:
-            if (
-                tries > 0
-                and await self.get_connector_status(connector_id)
-                == ChargeStateEnum.SUSPENDED_EV
-            ):
-                max_current = self.get_configuration("configs.CurrentMaxAssignment")
-                # Fixme: lookup actual min and max values
-                # possibly a "desired" value also?
-                if (max_current in (16, "16")) and tries != 0:  # noqa: SIM108
-                    max_current = "6"
-                else:
-                    max_current = "16"
-                await self.set_config("configs.CurrentMaxAssignment", max_current)
-                await self._async_update_data()
+            if tries > 0:
+                state = await self.get_connector_status(connector_id)
+                if state == ChargeStateEnum.SUSPENDED_EV:
+                    LOGGER.info("Seems like charge did not start as expected")
+                    await self.set_config("configs.CurrentMaxAssignment", "16")
 
-                await self.start_delayed_operation(
-                    15, handle_car_quirks, tries=tries - 1
-                )
-
-        await self.start_delayed_operation(15, handle_car_quirks)
+        await self.start_delayed_operation(60, handle_car_quirks)
 
     async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
         LOGGER.info(f"Stopping charge on connector {connector_id}")
         # Check connector state
         # Fixme: check that a charge is actually ongoing
+        self.cancel_delayed_operation()
+
         res: InstructionResponseType = (
             await self.config_entry.runtime_data.client.stop_charge(
                 device_id=self.device_id,

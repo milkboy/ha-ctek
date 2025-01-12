@@ -74,18 +74,17 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     async_add_entities(
         [
-            # CtekSensor(
-            #    coordinator=entry.runtime_data.coordinator,
-            #    entity_description=SensorEntityDescription(
-            #        key="charging_session.transaction_id",
-            #        name="Transaction ID",
-            #        icon="mdi:id-card",
-            #        translation_key="transaction_id",
-            #        has_entity_name=True,
-            #        device_class=None,
-            #    ),
-            #    device_id=entry.data["device_id"],
-            # ),
+            CtekSensor(
+                coordinator=entry.runtime_data.coordinator,
+                entity_description=SensorEntityDescription(
+                    key="charging_session.transaction_id",
+                    icon="mdi:id-card",
+                    translation_key="transaction_id",
+                    has_entity_name=True,
+                    device_class=None,
+                ),
+                device_id=entry.data["device_id"],
+            ),
             CtekSensor(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=SensorEntityDescription(
