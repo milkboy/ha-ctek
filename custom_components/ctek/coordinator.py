@@ -54,6 +54,7 @@ class CtekDataUpdateCoordinator(
         self.device_id = config_entry.data[CONF_DEVICE_ID]
         self.ws_connected: bool = False
         self.device_entry: dr.DeviceEntry
+        self._transaction_id: int | None = None
         super().__init__(
             hass,
             LOGGER,
@@ -144,60 +145,66 @@ class CtekDataUpdateCoordinator(
 
         return False
 
+    async def ws_message(self, message: str) -> None:
+        """Process the incoming message."""
+        LOGGER.debug(f"Handling WS message: {message}")
+        data = json.loads(message)
+        new_data: DataType = copy.deepcopy(self.data)
+        if data.get("type") == "chargingSessionSummary":
+            LOGGER.debug(f"Charging session summary: {message}")
+            session_data: ChargingSessionType = {
+                "device_id": data.get("device_id"),
+                "transaction_id": data.get("transaction_id"),
+                "device_online": data.get("device_online"),
+                "last_updated_time": None
+                if data.get("last_update_time", None) in ("", None)
+                else parse(data.get("last_update_time")),
+                "momentary_current": data.get("momentary_current"),
+                "momentary_power": data.get("momentary_power"),
+                "momentary_voltage": data.get("momentary_voltage"),
+                "ongoing_transaction": data.get("ongoing_transaction"),
+                "start_time": None
+                if data.get("start_time", None) in ("", None)
+                else parse(data.get("start_time")),
+                "type": data.get("type"),
+                "watt_hours_consumed": data.get("watt_hours_consumed"),
+            }
+            if new_data["charging_session"] is None:
+                new_data["charging_session"] = session_data
+            else:
+                new_data["charging_session"].update(session_data)
+            if (
+                self.data["charging_session"] is None
+                or new_data["charging_session"] is None
+            ) or self.data["charging_session"]["transaction_id"] != new_data[
+                "charging_session"
+            ]["transaction_id"]:
+                await self.async_request_refresh()
+        elif data.get("type") == "connectorStatus":
+            LOGGER.debug(f"Status update: {message}")
+            c = copy.deepcopy(
+                self.data["device_status"]["connectors"][str(data.get("id"))]
+            )
+            c["update_date"] = (
+                None
+                if data.get("updateDate", None) in (None, "")
+                else parse(data.get("updateDate"))
+            )
+            c["status_reason"] = data.get("statusReason")
+            c["current_status"] = ChargeStateEnum.find(data.get("status"))
+            c["start_date"] = (
+                None
+                if data.get("startDate") in (None, "")
+                else parse(data.get("startDate"))
+            )
+            new_data["device_status"]["connectors"][str(data.get("id"))] = c
+        else:
+            LOGGER.error(f"Not implemented: {message}")
+
+        self.async_set_updated_data(new_data)
+
     async def _async_update_data(self) -> Any:
         """Update data via library."""
-
-        async def ws_message(message: str) -> None:
-            # Process the incoming message
-            LOGGER.debug(f"Handling WS message: {message}")
-            data = json.loads(message)
-            new_data: DataType = copy.deepcopy(self.data)
-            if data.get("type") == "chargingSessionSummary":
-                LOGGER.debug(f"Charging session summary: {message}")
-                session_data: ChargingSessionType = {
-                    "device_id": data.get("device_id"),
-                    "transaction_id": data.get("transaction_id"),
-                    "device_online": data.get("device_online"),
-                    "last_updated_time": None
-                    if data.get("last_update_time", None) in ("", None)
-                    else parse(data.get("last_update_time")),
-                    "momentary_current": data.get("momentary_current"),
-                    "momentary_power": data.get("momentary_power"),
-                    "momentary_voltage": data.get("momentary_voltage"),
-                    "ongoing_transaction": data.get("ongoing_transaction"),
-                    "start_time": None
-                    if data.get("start_time", None) in ("", None)
-                    else parse(data.get("start_time")),
-                    "type": data.get("type"),
-                    "watt_hours_consumed": data.get("watt_hours_consumed"),
-                }
-                if new_data["charging_session"] is None:
-                    new_data["charging_session"] = session_data
-                else:
-                    new_data["charging_session"].update(session_data)
-            elif data.get("type") == "connectorStatus":
-                LOGGER.debug(f"Status update: {message}")
-                c = copy.deepcopy(
-                    self.data["device_status"]["connectors"][str(data.get("id"))]
-                )
-                c["update_date"] = (
-                    None
-                    if data.get("updateDate", None) in (None, "")
-                    else parse(data.get("updateDate"))
-                )
-                c["status_reason"] = data.get("statusReason")
-                c["current_status"] = ChargeStateEnum.find(data.get("status"))
-                c["start_date"] = (
-                    None
-                    if data.get("startDate") in (None, "")
-                    else parse(data.get("startDate"))
-                )
-                new_data["device_status"]["connectors"][str(data.get("id"))] = c
-            else:
-                LOGGER.error(f"Not implemented: {message}")
-
-            self.async_set_updated_data(new_data)
-
         try:
             devices = await self.config_entry.runtime_data.client.list_devices()
 
@@ -218,26 +225,7 @@ class CtekDataUpdateCoordinator(
 
             LOGGER.debug(ret)
 
-            # Subscribe to updates via websocket
-            client = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
-                "websocket_client"
-            )
-            if client is None:
-                websocket_url = f"{WS_URL}{self.device_id}"
-                client = WebSocketClient(
-                    hass=self.hass,
-                    url=websocket_url,
-                    entry=self.config_entry,
-                    callback=ws_message,
-                )
-
-                # Start the WebSocket connection
-                await client.start()
-
-                # Store the client instance
-                self.hass.data[DOMAIN][self.config_entry.entry_id][
-                    "websocket_client"
-                ] = client
+            await self.start_ws()
 
         # TODO: fetch charging schedules
         except CtekApiClientAuthenticationError as exception:
@@ -245,6 +233,28 @@ class CtekDataUpdateCoordinator(
         except CtekApiClientError as exception:
             raise UpdateFailed(exception) from exception
         return ret
+
+    async def start_ws(self) -> None:
+        """Subscribe to updates via websocket."""
+        client = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
+            "websocket_client"
+        )
+        if client is None:
+            websocket_url = f"{WS_URL}{self.device_id}"
+            client = WebSocketClient(
+                hass=self.hass,
+                url=websocket_url,
+                entry=self.config_entry,
+                callback=self.ws_message,
+            )
+
+            # Start the WebSocket connection
+            await client.start()
+
+            # Store the client instance
+            self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = (
+                client
+            )
 
     def get_property(self, key: str) -> str | bool | int | None:  # noqa: PLR0911
         """Get property value."""
