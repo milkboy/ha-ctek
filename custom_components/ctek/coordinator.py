@@ -472,7 +472,7 @@ class CtekDataUpdateCoordinator(
                 resume_charging=await self.get_connector_status(
                     connector_id=connector_id
                 )
-                == ChargeStateEnum.SUSPENDED_EVSE,
+                == ChargeStateEnum.suspended_evse,
             )
         )
 
@@ -484,7 +484,7 @@ class CtekDataUpdateCoordinator(
         async def handle_car_quirks(tries: int = 2) -> None:
             if tries > 0:
                 state = await self.get_connector_status(connector_id)
-                if state == ChargeStateEnum.SUSPENDED_EV:
+                if state == ChargeStateEnum.suspended_ev:
                     LOGGER.info("Seems like charge did not start as expected")
                     await self.set_config("configs.CurrentMaxAssignment", "16")
 

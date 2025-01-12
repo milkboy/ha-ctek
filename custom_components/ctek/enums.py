@@ -6,12 +6,12 @@ from enum import Enum
 class ChargeStateEnum(Enum):
     """Enumeration of possible charge states."""
 
-    AVAILABLE = "Available"
-    CHARGING = "Charging"
-    FINISHING = "Finishing"
-    PREPARING = "Preparing"
-    SUSPENDED_EVSE = "SuspendedEVSE"
-    SUSPENDED_EV = "SuspendedEV"
+    available = "Available"
+    charging = "Charging"
+    finishing = "Finishing"
+    preparing = "Preparing"
+    suspended_evse = "SuspendedEVSE"
+    suspended_ev = "SuspendedEV"
 
     @staticmethod
     def find(val: str) -> "ChargeStateEnum":
@@ -38,7 +38,7 @@ class ChargeStateEnum(Enum):
 
     def __str__(self) -> str:
         """Return the name of the ChargeStateEnum member."""
-        return self.value
+        return self.name
 
 
 class StatusReasonEnum(Enum):
