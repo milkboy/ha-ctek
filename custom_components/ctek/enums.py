@@ -38,7 +38,7 @@ class ChargeStateEnum(Enum):
 
     def __str__(self) -> str:
         """Return the name of the ChargeStateEnum member."""
-        return self.name
+        return self.value
 
 
 class StatusReasonEnum(Enum):
