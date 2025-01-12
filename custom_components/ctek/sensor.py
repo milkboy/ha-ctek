@@ -15,7 +15,7 @@ from homeassistant.components.sensor.const import (
 )
 
 from .entity import CtekEntity, callback
-from .types import ChargeStateEnum
+from .enums import ChargeStateEnum
 
 if TYPE_CHECKING:
     from collections.abc import Callable
