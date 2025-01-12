@@ -56,7 +56,7 @@
       "require_auth": {
         "name": "Require authorization before charging"
       },
-      "connector.charging": {
+      "connector_charging": {
         "name": "Connector {conn} charging"
       }
     }

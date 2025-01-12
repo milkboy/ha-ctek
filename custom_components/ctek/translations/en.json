@@ -53,7 +53,7 @@
       }
     },
     "switch": {
-      "connector.charging": {
+      "connector_charging": {
         "name": "Connector {conn} charging"
       },
       "require_auth": {

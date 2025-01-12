@@ -54,7 +54,7 @@ async def async_setup_entry(
                         key=f"device_status.connectors.{e}.current_status",
                         icon="mdi:ev-station",
                         device_class=SwitchDeviceClass.SWITCH,
-                        translation_key="connector.charging",
+                        translation_key="connector_charging",
                         translation_placeholders={"conn": str(e)},
                         has_entity_name=True,
                     ),
