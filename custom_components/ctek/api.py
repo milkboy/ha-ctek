@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import socket
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -78,9 +77,6 @@ class CtekApiClient:
         self._session = session
         self._access_token = None
         self._refresh_token = refresh_token
-        self._cache = None
-        self._cache_timestamp: datetime
-        self._cache_duration = timedelta(minutes=1)
 
     async def refresh_access_token(self) -> None:
         """Refresh the access token."""
@@ -219,18 +215,7 @@ class CtekApiClient:
               the status code.
 
         """
-        current_time = datetime.now(tz=DEFAULT_TIME_ZONE)
-        if self._cache and (
-            current_time - self._cache_timestamp < self._cache_duration
-        ):
-            return self._cache
-
-        res = await self._api_wrapper(method="GET", url=DEVICE_LIST_URL, auth=True)
-
-        self._cache = res
-        self._cache_timestamp = datetime.now(tz=DEFAULT_TIME_ZONE)
-
-        return res
+        return await self._api_wrapper(method="GET", url=DEVICE_LIST_URL, auth=True)
 
     async def get_configuration(self, device_id: str) -> dict:
         """Fetch data from the configs data."""
