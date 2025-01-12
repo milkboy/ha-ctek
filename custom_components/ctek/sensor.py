@@ -140,7 +140,7 @@ async def async_setup_entry(
                     entity_description=SensorEntityDescription(
                         key=f"device_status.connectors.{e}.current_status",
                         device_class=SensorDeviceClass.ENUM,
-                        translation_key="connector.status",
+                        translation_key="connector_status",
                         translation_placeholders={"conn": str(e)},
                         has_entity_name=True,
                     ),

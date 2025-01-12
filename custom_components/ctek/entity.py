@@ -65,9 +65,9 @@ class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):  # type:
         if self._icon_func is not None:
             return self._icon_func(self.state)
         if hasattr(self, "_attr_icon"):
-            return self._attr_icon # type: ignore[no-any-return]
+            return self._attr_icon  # type: ignore[no-any-return]
         if hasattr(self, "entity_description"):
-            return self.entity_description.icon # type: ignore[no-any-return]
+            return self.entity_description.icon  # type: ignore[no-any-return]
         return None
 
     # @property
