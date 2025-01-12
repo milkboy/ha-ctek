@@ -149,6 +149,7 @@ class CtekDataUpdateCoordinator(
 
         async def ws_message(message: str) -> None:
             # Process the incoming message
+            LOGGER.debug(f"Handling WS message: {message}")
             data = json.loads(message)
             new_data: DataType = copy.deepcopy(self.data)
             if data.get("type") == "chargingSessionSummary":
