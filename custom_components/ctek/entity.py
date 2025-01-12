@@ -47,7 +47,7 @@ class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):  # type:
         self._icon_func = icon_func
         self._icon_color_func = icon_color_func
         self._attr_unique_id = f"{DOMAIN}_{device_id}_{clean_name}"
-        self._name = f"{coordinator.data["model"]}_{clean_name}"
+        self._name = f"{coordinator.data['model']}_{clean_name}"
         self._device_id = device_id
         self._attr_device_info = dr.DeviceInfo(
             identifiers={(DOMAIN, device_id)},
