@@ -10,6 +10,8 @@ from homeassistant.components.switch import (
     SwitchEntityDescription,
 )
 
+from custom_components.ctek.types import ChargeStateEnum
+
 from .const import LOGGER
 from .entity import CtekEntity, callback
 
@@ -153,7 +155,7 @@ class CtekConnectorSwitch(CtekSwitch):
         """Return true if the switch is on."""
         return self.coordinator.get_property(
             f"device_status.connectors.{self._connector_id}.current_status"
-        ) in ("Charging", "SuspendedEV")
+        ) in (ChargeStateEnum.CHARGING, ChargeStateEnum.SUSPENDED_EV)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -166,5 +168,5 @@ class CtekConnectorSwitch(CtekSwitch):
         )
         self._attr_is_on = self.coordinator.get_property(
             f"device_status.connectors.{self._connector_id}.current_status"
-        ) in ("Charging", "SuspendedEV")
+        ) in (ChargeStateEnum.CHARGING, ChargeStateEnum.SUSPENDED_EV)
         self.schedule_update_ha_state()
