@@ -28,7 +28,7 @@
       "connector_start_date": {
         "name": "Connector {conn} Start date"
       },
-      "connector.status": {
+      "connector_status": {
         "name": "Connector {conn} status",
         "state": {
           "ChargeStateEnum.SUSPENDED_EV": "Suspended (car)",

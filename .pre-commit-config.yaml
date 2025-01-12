@@ -7,7 +7,7 @@ repos:
         args:
           - --fix
       - id: ruff-format
-        files: ^((homeassistant|pylint|script|tests)/.+)?[^/]+\.(py|pyi)$
+        files: ^(.+)?[^/]+\.(py|pyi)$
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
