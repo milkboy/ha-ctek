@@ -6,13 +6,8 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from dateutil.parser import ParserError, parse
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorEntityDescription,
-)
-from homeassistant.components.sensor.const import (
-    SensorDeviceClass,
-)
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor.const import SensorDeviceClass
 
 from .entity import CtekEntity, callback
 from .enums import ChargeStateEnum
@@ -43,12 +38,12 @@ def status_icon(status: ChargeStateEnum) -> str:
 
     """
     return {
-        ChargeStateEnum.AVAILABLE: "mdi:power-plug-off",
-        ChargeStateEnum.CHARGING: "mdi:battery-charging-medium",
-        ChargeStateEnum.SUSPENDED_EVSE: "mdi:timer-pause",
-        ChargeStateEnum.SUSPENDED_EV: "mdi:battery",
-        ChargeStateEnum.PREPARING: "mdi:battery-alert",
-        ChargeStateEnum.FINISHING: "mdi:pause-octagon",
+        ChargeStateEnum.available: "mdi:power-plug-off",
+        ChargeStateEnum.charging: "mdi:battery-charging-medium",
+        ChargeStateEnum.suspended_evse: "mdi:timer-pause",
+        ChargeStateEnum.suspended_ev: "mdi:battery",
+        ChargeStateEnum.preparing: "mdi:battery-alert",
+        ChargeStateEnum.finishing: "mdi:pause-octagon",
     }.get(status, "mdi:ev-station")
 
 
