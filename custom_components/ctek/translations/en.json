@@ -38,7 +38,7 @@
           "suspended_evse": "Suspended (EVSE)",
           "available": "Available",
           "charging": "Charging",
-          "Finishing": "Finishing",
+          "finishing": "Finishing",
           "preparing": "Auth required"
         }
       },
