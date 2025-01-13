@@ -8,10 +8,13 @@ class ChargeStateEnum(Enum):
 
     available = "Available"
     charging = "Charging"
+    faulted = "Faulted"  # Never seen this (yet)
     finishing = "Finishing"
     preparing = "Preparing"
-    suspended_evse = "SuspendedEVSE"
+    reserved = "Reserved"  # Probably unused
     suspended_ev = "SuspendedEV"
+    suspended_evse = "SuspendedEVSE"
+    unavailable = "Unavailable"  # May not be used
 
     @staticmethod
     def find(val: str) -> "ChargeStateEnum":
