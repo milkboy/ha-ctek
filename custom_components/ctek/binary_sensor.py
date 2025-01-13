@@ -23,18 +23,20 @@ if TYPE_CHECKING:
 DEVICE_STATUS_ENTITY_DESCRIPTIONS = (
     BinarySensorEntityDescription(
         key="device_status.connected",
-        name="Online",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         translation_key="online",
-        has_entity_name=True,
     ),
     BinarySensorEntityDescription(
         key="firmware_update.update_available",
-        name="Firmware Update Available",
-        icon="mdi:upload",
         translation_key="firmware_available",
-        has_entity_name=True,
         device_class=BinarySensorDeviceClass.UPDATE,
+    ),
+    BinarySensorEntityDescription(
+        key="attribute.cable_connected.{e}",
+        device_class=BinarySensorDeviceClass.PLUG,
+        translation_key="cable_connected",
+        translation_placeholders={"conn": "{e}"},
+        icon="mdi:ev-plug-type2",
     ),
 )
 
@@ -46,12 +48,36 @@ async def async_setup_entry(
 ) -> None:
     """Set up the binary_sensor platform."""
     async_add_entities(
-        CtekBinarySensor(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-            device_id=entry.data["device_id"],
-        )
-        for entity_description in DEVICE_STATUS_ENTITY_DESCRIPTIONS
+        [
+            CtekBinarySensor(
+                coordinator=entry.runtime_data.coordinator,
+                entity_description=BinarySensorEntityDescription(
+                    device_class=entity_description.device_class,
+                    entity_category=entity_description.entity_category,
+                    has_entity_name=True,
+                    icon=entity_description.icon,
+                    key=entity_description.key.replace("{e}", str(e)),
+                    translation_key=entity_description.translation_key,
+                    translation_placeholders={
+                        k: v.replace("{e}", str(e))
+                        for k, v in (
+                            entity_description.translation_placeholders.items()
+                            if entity_description.translation_placeholders is not None
+                            else {}.items()
+                        )
+                    },
+                ),
+                device_id=entry.data["device_id"],
+            )
+            for entity_description in DEVICE_STATUS_ENTITY_DESCRIPTIONS
+            for e in (
+                range(
+                    1, entry.runtime_data.coordinator.data["number_of_connectors"] + 1
+                )
+                if "{e}" in entity_description.key
+                else [""]
+            )
+        ]
     )
 
 
