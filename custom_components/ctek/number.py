@@ -43,7 +43,6 @@ async def async_setup_entry(
                 coordinator=entry.runtime_data.coordinator,
                 entity_description=CtekNumberEntityDescription(
                     key="configs.CurrentMaxAssignment",
-                    name="Maximum Current",
                     translation_key="max_current",
                     has_entity_name=True,
                     native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
