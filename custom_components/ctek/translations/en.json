@@ -22,7 +22,33 @@
       }
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure the CTEK API extra options",
+        "data": {
+          "enable_quirks": "Enable workarounds for misbehaving cars"
+        }
+      }
+    }
+  },
   "entity": {
+    "binary_sensor": {
+      "cable_connected": {
+        "name": "Connector {conn} plugged"
+      },
+      "firmware_available": {
+        "name": "Firmware Update Available"
+      },
+      "online": {
+        "name": "Online"
+      }
+    },
+    "number": {
+      "max_current": {
+        "name": "Max charging current"
+      }
+    },
     "sensor": {
       "connector_start_date": {
         "name": "Connector {conn} Start date"

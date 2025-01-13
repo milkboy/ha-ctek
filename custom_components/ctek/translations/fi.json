@@ -1,0 +1,92 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Laite on jo määritetty",
+      "cannot_connect": "Failed to connect"
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Kirjautuminen epäonnistui",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "client_id": "Client id",
+          "client_secret": "Client secret",
+          "password": "Password",
+          "username": "Username"
+        },
+        "description": "Syötä käyttäjätunnus, salasana sekä OAuth-paramettrit.",
+        "title": "Määritä CTEK API:n kirjautumistiedot"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lisäasetukset",
+        "data": {
+          "enable_quirks": "Yritä ohittaa ongelmia tiettyjen autojen kanssa"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "cable_connected": {
+        "name": "Liitin {conn} kytketty"
+      },
+      "firmware_available": {
+        "name": "Laiteohjelmistopäivitys saatavilla"
+      },
+      "online": {
+        "name": "Yhdistetty"
+      }
+    },
+    "number": {
+      "max_current": {
+        "name": "Enimmäislatausvirta"
+      }
+    },
+    "sensor": {
+      "connector_start_date": {
+        "name": "Liitin {conn} aloitettu"
+      },
+      "connector_status": {
+        "name": "Liitin {conn} tila",
+        "state": {
+          "available": "Vapaa",
+          "charging": "Lataa",
+          "finishing": "Lopettaa",
+          "preparing": "Odottaa tunnistautumista",
+          "suspended_ev": "Pysäytetty (auto)",
+          "suspended_evse": "Pysätetty (asema)"
+        }
+      },
+      "current": {
+        "name": "Virta"
+      },
+      "power": {
+        "name": "Teho"
+      },
+      "transaction_id": {
+        "name": "Transaktio ID"
+      },
+      "voltage": {
+        "name": "Jännite"
+      },
+      "wh_consumed": {
+        "name": "Ladattu Wh"
+      }
+    },
+    "switch": {
+      "connector_charging": {
+        "name": "Liitin {conn} lataa"
+      },
+      "require_auth": {
+        "name": "Vaadi tunnistautumista ennen latausta"
+      }
+    }
+  }
+}
