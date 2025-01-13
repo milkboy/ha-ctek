@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -18,6 +18,12 @@ from .api import (
     CtekApiClientError,
 )
 from .const import DOMAIN, LOGGER
+from .entity import callback
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+
+OPTIONS_SCHEMA = vol.Schema({vol.Required("car_quirks"): bool})
 
 
 class CtekConfigFlowContext(config_entries.ConfigFlowContext):  # type: ignore[misc]
@@ -167,3 +173,33 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
         )
         self.context["client"] = client
         await client.refresh_access_token()
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,  # noqa: ARG004
+    ) -> CtekOptionsFlowHandler:
+        """Create the options flow."""
+        return CtekOptionsFlowHandler()
+
+
+class CtekOptionsFlowHandler(config_entries.OptionsFlow):  # type: ignore[misc]
+    """Handle an options flow for CTEK."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        options_schema = vol.Schema(
+            {
+                vol.Optional(
+                    "enable_quirks",
+                    default=self.config_entry.options.get("enable_quirks", False),
+                ): bool
+            }
+        )
+
+        return self.async_show_form(step_id="init", data_schema=options_schema)
