@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+import pytz
 from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
@@ -22,11 +24,12 @@ from .enums import ChargeStateEnum
 if TYPE_CHECKING:
     import asyncio
     from collections.abc import Callable
-    from datetime import timedelta
 
     from homeassistant.core import HomeAssistant
 
     from .data import CtekConfigEntry
+
+from datetime import timedelta
 
 from .data import ChargingSessionType, ConnectorType, DataType, InstructionResponseType
 from .ws import WebSocketClient
@@ -236,25 +239,36 @@ class CtekDataUpdateCoordinator(
 
     async def start_ws(self) -> None:
         """Subscribe to updates via websocket."""
-        client = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
-            "websocket_client"
+        client: WebSocketClient | None = self.hass.data[DOMAIN][
+            self.config_entry.entry_id
+        ].get("websocket_client")
+        if client is not None:
+            start: datetime = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
+                "websocket_client_start"
+            )
+            if (
+                datetime.now(tz=pytz.timezone(self.hass.config.time_zone)) - start
+            ).total_seconds() < timedelta(minutes=5).seconds:
+                return
+
+            await client.stop()
+
+        websocket_url = f"{WS_URL}{self.device_id}"
+        client = WebSocketClient(
+            hass=self.hass,
+            url=websocket_url,
+            entry=self.config_entry,
+            callback=self.ws_message,
         )
-        if client is None:
-            websocket_url = f"{WS_URL}{self.device_id}"
-            client = WebSocketClient(
-                hass=self.hass,
-                url=websocket_url,
-                entry=self.config_entry,
-                callback=self.ws_message,
-            )
 
-            # Start the WebSocket connection
-            await client.start()
+        # Start the WebSocket connection
+        await client.start()
 
-            # Store the client instance
-            self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = (
-                client
-            )
+        # Store the client instance
+        self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = client
+        self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client_start"] = (
+            datetime.now(tz=pytz.timezone(self.hass.config.time_zone))
+        )
 
     def get_property(self, key: str) -> str | bool | int | None:  # noqa: PLR0911
         """Get property value."""
@@ -460,7 +474,7 @@ class CtekDataUpdateCoordinator(
         if meter_value_interval not in (30, "30"):
             await self.set_config("configs.MeterValueSampleInterval", "30")
 
-        await self.set_config("configs.CurrentMaxAssignment", "10")
+        # await self.set_config("configs.CurrentMaxAssignment", "10")
 
         # send start command
         # SuspendedEVSE -> needs to resume
@@ -485,8 +499,18 @@ class CtekDataUpdateCoordinator(
             if tries > 0:
                 state = await self.get_connector_status(connector_id)
                 if state == ChargeStateEnum.suspended_ev:
-                    LOGGER.info("Seems like charge did not start as expected")
+                    LOGGER.warning("Seems like charge did not start as expected")
                     await self.set_config("configs.CurrentMaxAssignment", "16")
+                    await self.set_config(
+                        "configs.CurrentMaxAssignment", str(self.get_min_current())
+                    )
+                    await self.start_delayed_operation(
+                        60, handle_car_quirks, tries=tries - 1
+                    )
+            else:
+                await self.set_config(
+                    "configs.CurrentMaxAssignment", str(self.get_max_current())
+                )
 
         await self.start_delayed_operation(60, handle_car_quirks)
 
@@ -530,3 +554,21 @@ class CtekDataUpdateCoordinator(
         return self.data["device_status"]["connectors"][str(connector_id)][
             "current_status"
         ]
+
+    def get_min_current(self) -> int:
+        """Get the minimum supported current."""
+        val = self.get_configuration("CurrentMinAssignment")
+        if isinstance(val, int):
+            return val
+        if isinstance(val, str) and val.isdigit():
+            return int(val)
+        return 6
+
+    def get_max_current(self) -> int:
+        """Get the maximum supported current."""
+        val = self.get_configuration("CurrentMaxAssignment")
+        if isinstance(val, int):
+            return val
+        if isinstance(val, str) and val.isdigit():
+            return int(val)
+        return 10
