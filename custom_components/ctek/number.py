@@ -20,20 +20,7 @@ class CtekNumberEntityDescription(NumberEntityDescription):  # type: ignore[misc
     max_value: int = 10
 
 
-DEVICE_STATUS_ENTITY_DESCRIPTIONS = (
-    CtekNumberEntityDescription(
-        key="configs.CurrentMaxAssignment",
-        name="Maximum Current",
-        translation_key="max_current",
-        has_entity_name=True,
-        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
-        step=1,
-        entity_category=EntityCategory.CONFIG,
-        max_value=16,
-        min_value=6,
-        icon="mdi:current-ac",
-    ),
-)
+DEVICE_STATUS_ENTITY_DESCRIPTIONS: tuple[CtekNumberEntityDescription, ...] = ()
 
 
 async def async_setup_entry(
@@ -43,12 +30,32 @@ async def async_setup_entry(
 ) -> None:
     """Set up the binary_sensor platform."""
     async_add_entities(
-        CtekNumberSetting(
-            coordinator=entry.runtime_data.coordinator,
-            entity_description=entity_description,
-            device_id=entry.data["device_id"],
-        )
-        for entity_description in DEVICE_STATUS_ENTITY_DESCRIPTIONS
+        [
+            *[
+                CtekNumberSetting(
+                    coordinator=entry.runtime_data.coordinator,
+                    entity_description=entity_description,
+                    device_id=entry.data["device_id"],
+                )
+                for entity_description in DEVICE_STATUS_ENTITY_DESCRIPTIONS
+            ],
+            CtekNumberSetting(
+                coordinator=entry.runtime_data.coordinator,
+                entity_description=CtekNumberEntityDescription(
+                    key="configs.CurrentMaxAssignment",
+                    name="Maximum Current",
+                    translation_key="max_current",
+                    has_entity_name=True,
+                    native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+                    step=1,
+                    entity_category=EntityCategory.CONFIG,
+                    max_value=entry.runtime_data.coordinator.get_max_current(),
+                    min_value=entry.runtime_data.coordinator.get_min_current(),
+                    icon="mdi:current-ac",
+                ),
+                device_id=entry.data["device_id"],
+            ),
+        ]
     )
 
 

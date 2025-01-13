@@ -1,26 +1,25 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "Configure the CTEK API credentials",
-        "description": "Enter username+password and the OAuth credentials you got.",
-        "data": {
-          "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "client_id": "Client id",
-          "client_secret": "Client secret"
-        }
-      }
-    },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]"
+      "already_configured": "Device is already configured",
+      "cannot_connect": "Failed to connect"
     },
     "error": {
-      "unknown": "[%key:common::config_flow::error::unknown%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "api_password": "Invalid authentication, use either API Key or Password.",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]"
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "client_id": "Client id",
+          "client_secret": "Client secret",
+          "password": "Password",
+          "username": "Username"
+        },
+        "description": "Enter username+password and the OAuth credentials you got.",
+        "title": "Configure the CTEK API credentials"
+      }
     }
   },
   "entity": {
@@ -28,18 +27,15 @@
       "connector_start_date": {
         "name": "Connector {conn} Start date"
       },
-      "transaction_id": {
-        "name": "Transaction ID"
-      },
       "connector_status": {
         "name": "Connector {conn} status",
         "state": {
-          "suspended_ev": "Suspended (car)",
-          "suspended_evse": "Suspended (EVSE)",
           "available": "Available",
           "charging": "Charging",
           "finishing": "Finishing",
-          "preparing": "Auth required"
+          "preparing": "Auth required",
+          "suspended_ev": "Suspended (car)",
+          "suspended_evse": "Suspended (EVSE)"
         }
       },
       "current": {
@@ -48,19 +44,22 @@
       "power": {
         "name": "Power"
       },
-      "wh_consumed": {
-        "name": "Session charged Wh"
+      "transaction_id": {
+        "name": "Transaction ID"
       },
       "voltage": {
         "name": "Voltage"
+      },
+      "wh_consumed": {
+        "name": "Session charged Wh"
       }
     },
     "switch": {
-      "require_auth": {
-        "name": "Require authorization before charging"
-      },
       "connector_charging": {
         "name": "Connector {conn} charging"
+      },
+      "require_auth": {
+        "name": "Require authorization before charging"
       }
     }
   }
