@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-import pytz
 from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
@@ -16,6 +15,7 @@ from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
 )
+from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .api import CtekApiClientAuthenticationError, CtekApiClientError
 from .const import DOMAIN, LOGGER, WS_URL
@@ -246,9 +246,9 @@ class CtekDataUpdateCoordinator(
             start: datetime = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
                 "websocket_client_start"
             )
-            if (
-                datetime.now(tz=pytz.timezone(self.hass.config.time_zone)) - start
-            ).total_seconds() < timedelta(minutes=5).seconds:
+            if (datetime.now(tz=DEFAULT_TIME_ZONE) - start).total_seconds() < timedelta(
+                minutes=5
+            ).seconds:
                 return
 
             await client.stop()
@@ -267,11 +267,42 @@ class CtekDataUpdateCoordinator(
         # Store the client instance
         self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = client
         self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client_start"] = (
-            datetime.now(tz=pytz.timezone(self.hass.config.time_zone))
+            datetime.now(tz=DEFAULT_TIME_ZONE)
+        )
+
+    def cable_connected(self, connector_id: int) -> bool:
+        """
+        Check if the cable is connected for a given connector ID.
+
+        Args:
+            connector_id (int): The ID of the connector to check.
+
+        Returns:
+            bool: True if the cable is connected, False otherwise.
+
+        """
+        val: ChargeStateEnum = self.data["device_status"]["connectors"][
+            str(connector_id)
+        ]["current_status"]
+        return val not in (
+            ChargeStateEnum.faulted,
+            ChargeStateEnum.reserved,
+            ChargeStateEnum.unavailable,
         )
 
     def get_property(self, key: str) -> str | bool | int | None:  # noqa: PLR0911
         """Get property value."""
+        if key.startswith("attribute."):
+            key = key.removeprefix("attribute.")
+            if key.startswith("cable_connected"):
+                conn = key.removeprefix("cable_connected.")
+                if conn.isnumeric():
+                    return self.cable_connected(int(conn))
+                LOGGER.debug(f"Failed to parse connector from '{key}'")
+                return None
+            LOGGER.warning(f"Unknown property {key} requested.")
+            return None
+
         if key.startswith("configs."):
             return self.get_configuration(key)
 
@@ -310,6 +341,9 @@ class CtekDataUpdateCoordinator(
         # TODO: Don't try to update read-only values
         if name.startswith("configs."):
             name = name.replace("configs.", "")
+        if self.is_readonly_configuration(name):
+            LOGGER.error(f"Configuration '{name}' is read-only")
+            return
 
         await self.config_entry.runtime_data.client.set_config(
             name=name, device_id=self.device_id, value=value
@@ -433,6 +467,16 @@ class CtekDataUpdateCoordinator(
         LOGGER.error(f"Configuration key {key} not found")
         return None
 
+    def is_readonly_configuration(self, key: str) -> str | int | None:
+        """Get configuration value."""
+        if key.startswith("configs."):
+            key = key.replace("configs.", "")
+        for c in self.data["configs"]:
+            if c["key"] == key:
+                return c["read_only"]
+        LOGGER.error(f"Configuration key {key} not found")
+        return None
+
     def update_configuration(
         self, key: str, value: str, *, ret: bool = False
     ) -> DataType | None:
@@ -512,7 +556,9 @@ class CtekDataUpdateCoordinator(
                     "configs.CurrentMaxAssignment", str(self.get_max_current())
                 )
 
-        await self.start_delayed_operation(60, handle_car_quirks)
+        if self.config_entry.options["enable_quirks"]:
+            LOGGER.info("Quirks enabled")
+            await self.start_delayed_operation(60, handle_car_quirks)
 
     async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
