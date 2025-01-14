@@ -15,6 +15,7 @@ class ChargeStateEnum(Enum):
     suspended_ev = "SuspendedEV"
     suspended_evse = "SuspendedEVSE"
     unavailable = "Unavailable"  # May not be used
+    offline = "Offline"
 
     @staticmethod
     def find(val: str) -> "ChargeStateEnum":

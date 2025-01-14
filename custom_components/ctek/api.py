@@ -12,10 +12,11 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import (
+    _LOGGER,
     APP_PROFILE,
     CONTROL_URL,
     DEVICE_LIST_URL,
-    LOGGER,
+    DOMAIN,
     OAUTH2_TOKEN_URL,
     USER_AGENT,
     CtekApiClientAuthenticationError,
@@ -24,11 +25,14 @@ from .const import (
 )
 
 if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
     from .data import InstructionResponseType
 
 DEBUG = False
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
+LOGGER = _LOGGER.getChild("api")
 
 
 def _needs_refresh(response: aiohttp.ClientResponse) -> bool:
@@ -41,7 +45,7 @@ def _assert_success(response: dict) -> bool:
     if val is False:
         LOGGER.error(response)
         msg = "Operation failed"
-        raise HomeAssistantError(msg)
+        _raise_home_assistant_error(msg)
     return True
 
 
@@ -55,6 +59,11 @@ def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
     response.raise_for_status()
 
 
+def _raise_home_assistant_error(msg: str) -> None:
+    """Raise HomeAssistantError with the given message."""
+    raise HomeAssistantError(msg)
+
+
 class CtekApiClient:
     """Sample API Client."""
 
@@ -62,6 +71,7 @@ class CtekApiClient:
 
     def __init__(
         self,
+        hass: HomeAssistant,
         username: str,
         password: str,
         client_id: str,
@@ -70,6 +80,7 @@ class CtekApiClient:
         refresh_token: str | None = None,
     ) -> None:
         """Sample API Client."""
+        self.hass = hass
         self._username = username
         self._password = password
         self._client_id = client_id
@@ -113,6 +124,14 @@ class CtekApiClient:
             )
 
             LOGGER.debug("Access token refreshed: %s", res["access_token"])
+        if self._access_token != res["access_token"]:
+            self.hass.bus.fire(
+                event_type=f"{DOMAIN}_tokens_updated",
+                event_data={
+                    "access": res["access_token"],
+                    "refresh": res["refresh_token"],
+                },
+            )
         self._access_token = res["access_token"]
         self._refresh_token = res["refresh_token"]
 
@@ -186,6 +205,41 @@ class CtekApiClient:
         LOGGER.debug(res["data"])
         # _assert_success(res)
         return self.parse_instruction_response(res["data"])
+
+    async def send_command(
+        self, *, device_id: str, command: str
+    ) -> InstructionResponseType:
+        """Send arbitrary command."""
+        LOGGER.debug(
+            "Trying to send command %s to charger %s)",
+            command,
+            device_id,
+        )
+        try:
+            res = await self._api_wrapper(
+                method="POST",
+                url=CONTROL_URL,
+                data={"device_id": device_id, "instruction": command},
+                # data={
+                #    "connector_id": connector_id,
+                #    "device_id": device_id,
+                #    "instruction": "RESUME_SCHEDULE"
+                #    if resume_schedule
+                #    else "PAUSE_CHARGING",
+                # },
+                auth=True,
+            )
+            if res.get("data", {}).get("error_code", None) is not None:
+                error_code = res.get("data", {}).get("error_code", None)
+                error_message = res.get("data", {}).get("error_message", None)
+                msg = f"Failed to stop charging: {error_code}: {error_message}"
+                _raise_home_assistant_error(msg)
+            LOGGER.debug(res["data"])
+            # _assert_success(res)
+            return self.parse_instruction_response(res["data"])
+        except Exception:
+            LOGGER.exception("Failed to send command")
+            raise
 
     async def set_config(self, device_id: str, name: str, value: str) -> None:
         """Set a configuration value."""

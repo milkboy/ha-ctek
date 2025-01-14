@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import LOGGER
+from .const import _LOGGER
 from .coordinator import CtekDataUpdateCoordinator
 from .data import CtekConfigEntry
 from .entity import CtekEntity, callback
@@ -21,6 +21,7 @@ class CtekNumberEntityDescription(NumberEntityDescription):  # type: ignore[misc
 
 
 DEVICE_STATUS_ENTITY_DESCRIPTIONS: tuple[CtekNumberEntityDescription, ...] = ()
+LOGGER = _LOGGER.getChild("entity")
 
 
 async def async_setup_entry(
@@ -46,7 +47,7 @@ async def async_setup_entry(
                     translation_key="max_current",
                     has_entity_name=True,
                     native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
-                    step=1,
+                    step=2,
                     entity_category=EntityCategory.CONFIG,
                     max_value=entry.runtime_data.coordinator.get_max_current(),
                     min_value=entry.runtime_data.coordinator.get_min_current(),
@@ -101,8 +102,8 @@ class CtekNumberSetting(CtekEntity, NumberEntity):  # type: ignore[misc]
             )
             self._attr_native_value = int(value)
         except Exception as ex:
-            msg = f"Failed to set maximum current: {ex}"
-            LOGGER.error(msg)
+            msg = "Failed to set maximum current"
+            LOGGER.exception(msg)
             raise HomeAssistantError(msg) from ex
 
     @callback

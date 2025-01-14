@@ -11,6 +11,7 @@ from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
@@ -18,7 +19,7 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .api import CtekApiClientAuthenticationError, CtekApiClientError
-from .const import DOMAIN, LOGGER, WS_URL
+from .const import _LOGGER, DOMAIN, WS_URL
 from .enums import ChargeStateEnum
 
 if TYPE_CHECKING:
@@ -33,6 +34,13 @@ from datetime import timedelta
 
 from .data import ChargingSessionType, ConnectorType, DataType, InstructionResponseType
 from .ws import WebSocketClient
+
+LOGGER = _LOGGER.getChild("coordinator")
+
+
+def callback(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Return the callback function."""
+    return func
 
 
 class CtekDataUpdateCoordinator(
@@ -58,6 +66,8 @@ class CtekDataUpdateCoordinator(
         self.ws_connected: bool = False
         self.device_entry: dr.DeviceEntry
         self._transaction_id: int | None = None
+        self._store: Store = Store(hass, 1, f"{DOMAIN}_cache")
+        self._data: dict = {}
         super().__init__(
             hass,
             LOGGER,
@@ -95,52 +105,76 @@ class CtekDataUpdateCoordinator(
                 delay,
                 lambda: self.hass.async_create_task(func(**kwargs)),
             )
-        except Exception as ex:  # noqa: BLE001
-            LOGGER.error("Failed to schedule delayed operation: %s", ex)
+        except Exception:
+            LOGGER.exception("Failed to schedule delayed operation")
+
+    @callback
+    async def handle_tokens(self, event: Any) -> None:
+        """Handle token update events."""
+        if self._data.get("refresh_token") != event.data.get("refresh"):
+            LOGGER.debug("Tokens updated; storing")
+            self._data.update({"refresh_token": event.data.get("refresh")})
+            await self._store.async_save(self._data)
+        else:
+            LOGGER.debug("Token not changed")
+
+    async def get_token(self) -> str | None:
+        """Retrieve the refresh token."""
+        if self._data == {}:
+            stored: dict | None = await self._store.async_load()
+        if stored is not None:
+            self._data = stored
+        return self._data.get("refresh_token")
+
+    async def init_data(self) -> bool:
+        """Initialize data from the API and create device entry."""
+        devices = await self.config_entry.runtime_data.client.list_devices()
+        d = devices.get("data", [])
+        for device in devices.get("data", []):
+            if self.device_id != device["device_id"]:
+                continue
+
+            self.data = self.parse_data(d)
+
+            self.data["configs"] = (
+                (
+                    await self.config_entry.runtime_data.client.get_configuration(
+                        device_id=device["device_id"]
+                    )
+                )
+                .get("data", {})
+                .get("configurations", {})
+            )
+
+            if self.hass.data.get(DOMAIN) is None:
+                self.hass.data[DOMAIN] = {}
+
+            device_registry = dr.async_get(self.hass)
+            tmp = device_registry.async_get_or_create(
+                config_entry_id=self.config_entry.entry_id,
+                identifiers={(DOMAIN, self.data["device_id"])},
+                manufacturer="CTEK",
+                name=device["device_alias"],
+                model=device["model"],
+                model_id=device["standardized_model"],
+                sw_version=device["firmware_id"],
+                hw_version=device["hardware_id"],
+                connections={
+                    (
+                        dr.CONNECTION_NETWORK_MAC,
+                        device["device_info"]["mac_address"],
+                    )
+                },
+            )
+            self.device_entry = tmp
+            return True
+        return False
 
     async def _async_setup(self) -> bool:
         """First run. Set up the data from the API and create device."""
         try:
-            devices = await self.config_entry.runtime_data.client.list_devices()
-            d = devices.get("data", [])
-            for device in devices.get("data", []):
-                if self.device_id != device["device_id"]:
-                    continue
-
-                self.data = self.parse_data(d)
-
-                self.data["configs"] = (
-                    (
-                        await self.config_entry.runtime_data.client.get_configuration(
-                            device_id=device["device_id"]
-                        )
-                    )
-                    .get("data", {})
-                    .get("configurations", {})
-                )
-
-                if self.hass.data.get(DOMAIN) is None:
-                    self.hass.data[DOMAIN] = {}
-
-                device_registry = dr.async_get(self.hass)
-                tmp = device_registry.async_get_or_create(
-                    config_entry_id=self.config_entry.entry_id,
-                    identifiers={(DOMAIN, self.data["device_id"])},
-                    manufacturer="CTEK",
-                    name=device["device_alias"],
-                    model=device["model"],
-                    model_id=device["standardized_model"],
-                    sw_version=device["firmware_id"],
-                    hw_version=device["hardware_id"],
-                    connections={
-                        (
-                            dr.CONNECTION_NETWORK_MAC,
-                            device["device_info"]["mac_address"],
-                        )
-                    },
-                )
-                self.device_entry = tmp
-                return True
+            self.hass.bus.async_listen(f"{DOMAIN}_tokens_updated", self.handle_tokens)
+            await self.init_data()
         except CtekApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
         except CtekApiClientError as exception:
@@ -150,11 +184,10 @@ class CtekDataUpdateCoordinator(
 
     async def ws_message(self, message: str) -> None:
         """Process the incoming message."""
-        LOGGER.debug(f"Handling WS message: {message}")
         data = json.loads(message)
         new_data: DataType = copy.deepcopy(self.data)
         if data.get("type") == "chargingSessionSummary":
-            LOGGER.debug(f"Charging session summary: {message}")
+            LOGGER.debug("Charging session summary: %s", message)
             session_data: ChargingSessionType = {
                 "device_id": data.get("device_id"),
                 "transaction_id": data.get("transaction_id"),
@@ -184,7 +217,7 @@ class CtekDataUpdateCoordinator(
             ]["transaction_id"]:
                 await self.async_request_refresh()
         elif data.get("type") == "connectorStatus":
-            LOGGER.debug(f"Status update: {message}")
+            LOGGER.debug("Status update: %s", message)
             c = copy.deepcopy(
                 self.data["device_status"]["connectors"][str(data.get("id"))]
             )
@@ -202,13 +235,18 @@ class CtekDataUpdateCoordinator(
             )
             new_data["device_status"]["connectors"][str(data.get("id"))] = c
         else:
-            LOGGER.error(f"Not implemented: {message}")
+            LOGGER.error("Not implemented: %s", message)
 
         self.async_set_updated_data(new_data)
 
     async def _async_update_data(self) -> Any:
         """Update data via library."""
         try:
+            if self.data is None or self.device_entry is None:
+                await self.init_data()
+                await self.start_ws(force=True)
+                return self.data
+
             devices = await self.config_entry.runtime_data.client.list_devices()
 
             configs = (
@@ -237,7 +275,7 @@ class CtekDataUpdateCoordinator(
             raise UpdateFailed(exception) from exception
         return ret
 
-    async def start_ws(self) -> None:
+    async def start_ws(self, *, force: bool = False) -> None:
         """Subscribe to updates via websocket."""
         client: WebSocketClient | None = self.hass.data[DOMAIN][
             self.config_entry.entry_id
@@ -246,9 +284,12 @@ class CtekDataUpdateCoordinator(
             start: datetime = self.hass.data[DOMAIN][self.config_entry.entry_id].get(
                 "websocket_client_start"
             )
-            if (datetime.now(tz=DEFAULT_TIME_ZONE) - start).total_seconds() < timedelta(
-                minutes=5
-            ).seconds:
+            if (
+                (datetime.now(tz=DEFAULT_TIME_ZONE) - start).total_seconds()
+                < timedelta(minutes=5).seconds
+                and await client.running()
+                and not force
+            ):
                 return
 
             await client.stop()
@@ -285,6 +326,7 @@ class CtekDataUpdateCoordinator(
             str(connector_id)
         ]["current_status"]
         return val not in (
+            ChargeStateEnum.available,
             ChargeStateEnum.faulted,
             ChargeStateEnum.reserved,
             ChargeStateEnum.unavailable,
@@ -298,9 +340,9 @@ class CtekDataUpdateCoordinator(
                 conn = key.removeprefix("cable_connected.")
                 if conn.isnumeric():
                     return self.cable_connected(int(conn))
-                LOGGER.debug(f"Failed to parse connector from '{key}'")
+                LOGGER.debug("Failed to parse connector from '%s'", key)
                 return None
-            LOGGER.warning(f"Unknown property {key} requested.")
+            LOGGER.warning("Unknown property '%s' requested", key)
             return None
 
         if key.startswith("configs."):
@@ -333,7 +375,7 @@ class CtekDataUpdateCoordinator(
 
         if key in self.data:
             return self.data[key]  # type: ignore[literal-required,no-any-return]
-        LOGGER.debug(f"Property {key} not found")
+        LOGGER.debug("Property '%s' not found", key)
         return None
 
     async def set_config(self, name: str, value: str) -> None:
@@ -342,7 +384,7 @@ class CtekDataUpdateCoordinator(
         if name.startswith("configs."):
             name = name.replace("configs.", "")
         if self.is_readonly_configuration(name):
-            LOGGER.error(f"Configuration '{name}' is read-only")
+            LOGGER.error("Configuration '%s' is read-only", name)
             return
 
         await self.config_entry.runtime_data.client.set_config(
@@ -464,7 +506,7 @@ class CtekDataUpdateCoordinator(
         for c in self.data["configs"]:
             if c["key"] == key:
                 return c["value"]
-        LOGGER.error(f"Configuration key {key} not found")
+        LOGGER.error("Configuration key '%s' not found", key)
         return None
 
     def is_readonly_configuration(self, key: str) -> str | int | None:
@@ -474,7 +516,7 @@ class CtekDataUpdateCoordinator(
         for c in self.data["configs"]:
             if c["key"] == key:
                 return c["read_only"]
-        LOGGER.error(f"Configuration key {key} not found")
+        LOGGER.error("Configuration key '%s' not found", key)
         return None
 
     def update_configuration(
@@ -518,7 +560,12 @@ class CtekDataUpdateCoordinator(
         if meter_value_interval not in (30, "30"):
             await self.set_config("configs.MeterValueSampleInterval", "30")
 
-        # await self.set_config("configs.CurrentMaxAssignment", "10")
+        if self.config_entry.options["enable_quirks"]:
+            LOGGER.info("Quirks enabled")
+            LOGGER.debug("Setting minimum current")
+            await self.set_config(
+                "configs.CurrentMaxAssignment", str(self.get_min_current())
+            )
 
         # send start command
         # SuspendedEVSE -> needs to resume
@@ -539,30 +586,40 @@ class CtekDataUpdateCoordinator(
             LOGGER.error(msg)
             raise HomeAssistantError(msg)
 
-        async def handle_car_quirks(tries: int = 2) -> None:
+        async def handle_car_quirks(tries: int = 3) -> None:
             if tries > 0:
                 state = await self.get_connector_status(connector_id)
-                if state == ChargeStateEnum.suspended_ev:
-                    LOGGER.warning("Seems like charge did not start as expected")
-                    await self.set_config("configs.CurrentMaxAssignment", "16")
+                reboot: bool = self.config_entry.options[
+                    "reboot_station_if_start_fails"
+                ]
+                if state == ChargeStateEnum.charging:
+                    LOGGER.info("Charge has started; setting MAX current")
                     await self.set_config(
-                        "configs.CurrentMaxAssignment", str(self.get_min_current())
+                        "configs.CurrentMaxAssignment", str(self.get_max_current())
                     )
+                    return
+
+                if state == ChargeStateEnum.suspended_ev and reboot:
+                    LOGGER.warning(
+                        "Seems like charge did not start as expected; rebooting"
+                    )
+                    await self.send_command("REBOOT")
                     await self.start_delayed_operation(
-                        60, handle_car_quirks, tries=tries - 1
+                        120, handle_car_quirks, tries=tries - 1
                     )
             else:
-                await self.set_config(
-                    "configs.CurrentMaxAssignment", str(self.get_max_current())
+                delay = 60
+                LOGGER.info("Charge not started; checking again in %ds", delay)
+                await self.start_delayed_operation(
+                    delay, handle_car_quirks, tries=tries - 1
                 )
 
         if self.config_entry.options["enable_quirks"]:
-            LOGGER.info("Quirks enabled")
             await self.start_delayed_operation(60, handle_car_quirks)
 
     async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
-        LOGGER.info(f"Stopping charge on connector {connector_id}")
+        LOGGER.info("Stopping charge on connector %s", connector_id)
         # Check connector state
         # Fixme: check that a charge is actually ongoing
         self.cancel_delayed_operation()
@@ -618,3 +675,19 @@ class CtekDataUpdateCoordinator(
         if isinstance(val, str) and val.isdigit():
             return int(val)
         return 10
+
+    async def send_command(self, command: str) -> InstructionResponseType:
+        """Send a command to the API."""
+        res: InstructionResponseType = (
+            await self.config_entry.runtime_data.client.send_command(
+                device_id=self.device_id,
+                # connector_id=connector_id,
+                command=command,
+            )
+        )
+        LOGGER.debug(res)
+        return res
+
+    async def unload(self) -> None:
+        """Unload the coordinator and save the data."""
+        await self._store.async_save(self._data)

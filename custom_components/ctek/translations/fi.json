@@ -7,15 +7,15 @@
     "error": {
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Kirjautuminen epäonnistui",
-      "unknown": "Unexpected error"
+      "unknown": "Odottamaton virhe"
     },
     "step": {
       "user": {
         "data": {
           "client_id": "Client id",
           "client_secret": "Client secret",
-          "password": "Password",
-          "username": "Username"
+          "password": "Salasana",
+          "username": "Käyttäjätunnus"
         },
         "description": "Syötä käyttäjätunnus, salasana sekä OAuth-paramettrit.",
         "title": "Määritä CTEK API:n kirjautumistiedot"
@@ -27,7 +27,14 @@
       "init": {
         "title": "Lisäasetukset",
         "data": {
-          "enable_quirks": "Yritä ohittaa ongelmia tiettyjen autojen kanssa"
+          "enable_quirks": "Yritä ohittaa ongelmia tiettyjen autojen kanssa",
+          "log_level": "Logitustaso"
+        }
+      },
+      "quirks": {
+        "data": {
+          "start_charge_min_current": "Käynnistä lataus pienimmällä virralla",
+          "reboot_station_if_start_fails": "Käynnistä asema uudestaan jos lataus ei käynnisty"
         }
       }
     }

@@ -1,0 +1,10 @@
+send_command:
+  target:
+    device:
+      integration: ctek
+  fields:
+    command:
+      required: true
+      example: REBOOT
+      selector:
+        text:

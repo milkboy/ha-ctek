@@ -11,9 +11,10 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import LOGGER, WS_USER_AGENT
+from .const import _LOGGER, WS_USER_AGENT
 
 MAX_ERRORS = 10
+LOGGER = _LOGGER.getChild("ws")
 
 
 class WebSocketClient:
@@ -54,7 +55,7 @@ class WebSocketClient:
                 await self._connect()
             except Exception as err:
                 if not self._closed:
-                    LOGGER.error("WebSocket connection failed: %s", err)
+                    LOGGER.exception("WebSocket connection failed")
                     errors += 1
                     if errors > MAX_ERRORS:
                         raise Exception from err  # noqa: TRY002
@@ -88,8 +89,8 @@ class WebSocketClient:
                     if msg.type == aiohttp.WSMsgType.TEXT:
                         try:
                             await self.callback(message=msg.data)
-                        except Exception:  # noqa: BLE001
-                            LOGGER.error("Error processing message: %s", msg)
+                        except Exception:
+                            LOGGER.exception("Error processing message: %s", msg)
 
                     elif msg.type == aiohttp.WSMsgType.ERROR:
                         LOGGER.error(
@@ -110,8 +111,8 @@ class WebSocketClient:
                     TimeoutError,
                     aiohttp.ClientError,
                     aiohttp.WSServerHandshakeError,
-                ) as err:
-                    LOGGER.error("WebSocket error: %s", err)
+                ):
+                    LOGGER.exception("WebSocket error")
                     break
 
     async def stop(self, event: Any = None) -> None:  # noqa: ARG002
@@ -123,3 +124,7 @@ class WebSocketClient:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
+
+    async def running(self) -> bool:
+        """Check if the WebSocket client is running."""
+        return not self._closed and self._task is not None

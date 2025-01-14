@@ -17,11 +17,13 @@ from .api import (
     CtekApiClientCommunicationError,
     CtekApiClientError,
 )
-from .const import DOMAIN, LOGGER
+from .const import _LOGGER as LOGGER
+from .const import DOMAIN
 from .entity import callback
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 
 OPTIONS_SCHEMA = vol.Schema({vol.Required("car_quirks"): bool})
 
@@ -34,7 +36,6 @@ class CtekConfigFlowContext(config_entries.ConfigFlowContext):  # type: ignore[m
     client_id: str
     client_secret: str
     device_id: str
-    refresh_token: str
     devices: dict[Any, Any]
     client: CtekApiClient
 
@@ -56,6 +57,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
         if user_input is not None:
             try:
                 await self._test_credentials(
+                    self.hass,
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
                     client_secret=user_input["client_secret"],
@@ -156,15 +158,20 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
                 CONF_DEVICE_ID: user_input[CONF_DEVICE_ID],
                 "client_id": self.context["client_id"],
                 "client_secret": self.context["client_secret"],
-                "refresh_token": self.context["client"].get_refresh_token(),
             },
         )
 
     async def _test_credentials(
-        self, username: str, password: str, client_id: str, client_secret: str
+        self,
+        hass: HomeAssistant,
+        username: str,
+        password: str,
+        client_id: str,
+        client_secret: str,
     ) -> None:
         """Validate credentials."""
         client = CtekApiClient(
+            hass=hass,
             username=username,
             password=password,
             client_secret=client_secret,
@@ -190,16 +197,71 @@ class CtekOptionsFlowHandler(config_entries.OptionsFlow):  # type: ignore[misc]
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Manage the options."""
+        log_levels = [
+            ("ERROR", "error"),
+            ("WARN", "warning"),
+            ("INFO", "info"),
+            ("DEBUG", "debug"),
+        ]
+        options = self.config_entry.options
+
         if user_input is not None:
+            if options.get("enable_quirks", False):
+                return await self.async_step_quirks()
+
             return self.async_create_entry(title="", data=user_input)
 
-        options_schema = vol.Schema(
+        options_schema: vol.Schema = vol.Schema(
             {
+                vol.Required(
+                    "log_level",
+                    default=options.get("log_level", "INFO"),
+                ): selector.SelectSelector(
+                    config=selector.SelectSelectorConfig(
+                        translation_key="log_levels",
+                        options=[
+                            selector.SelectOptionDict(value=k, label=v)
+                            for k, v in log_levels
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
                 vol.Optional(
                     "enable_quirks",
-                    default=self.config_entry.options.get("enable_quirks", False),
-                ): bool
+                    default=options.get("enable_quirks", False),
+                ): bool,
             }
         )
 
         return self.async_show_form(step_id="init", data_schema=options_schema)
+
+    async def async_step_quirks(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Manage the quirks options."""
+        options = self.config_entry.options
+
+        if user_input is not None:
+            full_data = {**options, "enable_quirks": True, **user_input}
+            return self.async_create_entry(title="", data=full_data)
+
+        options_schema: vol.Schema = vol.Schema(
+            {
+                vol.Required(
+                    "start_charge_min_current",
+                    default=options.get(
+                        "start_charge_min_current",
+                        options.get("start_charge_min_current"),
+                    ),
+                ): bool,
+                vol.Required(
+                    "reboot_station_if_start_fails",
+                    default=options.get(
+                        "reboot_station_if_start_fails",
+                        options.get("reboot_station_if_start_fails", False),
+                    ),
+                ): bool,
+            }
+        )
+
+        return self.async_show_form(step_id="quirks", data_schema=options_schema)
