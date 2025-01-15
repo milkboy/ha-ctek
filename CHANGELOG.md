@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.5] - 2025-01-15
+
+### Fixed
+
+- Issue with command execution timing
+- Datetime timezone handling
+- Possibly fixed infinite recursion on status updates
+
+### Changed
+
+- Improved logging for better debugging
+
 ## [0.0.4] - 2025-01-14
 
 ### Added
