@@ -610,7 +610,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 reboot: bool = self.config_entry.options[
                     "reboot_station_if_start_fails"
                 ]
-                if state == ChargeStateEnum.suspended_evse or state==ChargeStateEnum.preparing:
+                if state in (ChargeStateEnum.suspended_evse, ChargeStateEnum.preparing):
                     LOGGER.info("Charge is not started. Trying again")
                     await self.config_entry.runtime_data.client.start_charge(
                         device_id=self.device_id,
