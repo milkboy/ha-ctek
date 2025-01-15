@@ -7,19 +7,17 @@ from typing import TYPE_CHECKING
 from dateutil.parser import ParserError, parse
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.components.sensor.const import SensorDeviceClass
-from propcache import cached_property
+from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .entity import CtekEntity, callback
 from .enums import ChargeStateEnum
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from datetime import date, datetime
-    from decimal import Decimal
+    from datetime import datetime
 
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-    from homeassistant.helpers.typing import StateType
 
     from .coordinator import CtekDataUpdateCoordinator
     from .data import CtekConfigEntry
@@ -168,6 +166,8 @@ async def async_setup_entry(
 class CtekSensor(CtekEntity, SensorEntity):
     """ctek Sensor class."""
 
+    _attr_native_value: ChargeStateEnum | str | int | float | datetime | None = None
+
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,
@@ -187,18 +187,6 @@ class CtekSensor(CtekEntity, SensorEntity):
         )
 
         SensorEntity.__init__(self)
-        # self._attr_native_value = self.coordinator.get_property(
-        #    self.entity_description.key
-        # )
-
-    @cached_property  # type: ignore[misc]
-    def native_value(self) -> StateType | date | datetime | Decimal:
-        """Return the value reported by the sensor."""
-        if self.device_class == SensorDeviceClass.DATE:
-            if self._attr_native_value is None or self._attr_native_value == "":
-                return None
-            return parse(str(self._attr_native_value))
-        return self._attr_native_value
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -211,7 +199,11 @@ class CtekSensor(CtekEntity, SensorEntity):
                 val = 0
         elif self.device_class == SensorDeviceClass.DATE and isinstance(val, str):
             try:
-                val = parse(str(val))
+                val = (
+                    parse(str(val))
+                    .astimezone(DEFAULT_TIME_ZONE)
+                    .replace(second=0, microsecond=0)
+                )
             except ParserError:
                 val = None
             except OverflowError:

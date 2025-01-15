@@ -95,5 +95,17 @@
         "name": "Vaadi tunnistautumista ennen latausta"
       }
     }
+  },
+  "services": {
+    "send_command": {
+      "description": "Lähetä jokin (tuettu) komento asemalle",
+      "fields": {
+        "command": {
+          "description": "Komento (ISOILLA kirjaimilla, esim REBOOT)",
+          "name": "Komento"
+        }
+      },
+      "name": "Lähetä komento asemalle"
+    }
   }
 }

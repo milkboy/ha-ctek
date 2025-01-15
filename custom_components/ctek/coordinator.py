@@ -475,23 +475,44 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         ret: dict[str, ConnectorType] = {}
         for c in connectors:
             old: ConnectorType | None = None
+            new: ConnectorType
             if ret.get(str(c["id"]), None) is not None:
                 old = copy.deepcopy(ret[str(c["id"])])
-            new: ConnectorType = {
-                "current_status": ChargeStateEnum.find(c.get("current_status")),
-                "start_date": None
-                if c.get("start_date") in (None, "")
-                else parse(c.get("start_date")),
-                "status_reason": c.get("status_reason"),
-                "update_date": None
-                if c.get("update_date") in (None, "")
-                else parse(c.get("update_date")),
-                "relative_time": c.get("relative_time", ""),
-                "has_schedule": c.get("has_schedule", False),
-                "has_active_schedule": c.get("has_active_schedule", False),
-                "has_overridden_schedule": c.get("has_overridden_schedule", False),
-                "state_localize_key": c.get("state_localize_key", ""),
-            }
+            if c.get("statusReason") is not None:
+                new = {
+                    "current_status": ChargeStateEnum.find(c.get("status")),
+                    "start_date": None
+                    if c.get("startDate") in (None, "")
+                    else parse(c.get("startDate"))
+                    .astimezone(DEFAULT_TIME_ZONE)
+                    .replace(second=0, microsecond=0),
+                    "status_reason": c.get("statusReason"),
+                    "update_date": None
+                    if c.get("updateDate") in (None, "")
+                    else parse(c.get("updateDate")).astimezone(DEFAULT_TIME_ZONE),
+                    "state_localize_key": c.get("stateLocalizeKey", ""),
+                }
+            else:
+                new = {
+                    "current_status": ChargeStateEnum.find(c.get("current_status")),
+                    "start_date": None
+                    if c.get("start_date", c.get("startDate")) in (None, "")
+                    else parse(c.get("start_date", c.get("startDate")))
+                    .astimezone(DEFAULT_TIME_ZONE)
+                    .replace(second=0, microsecond=0),
+                    "status_reason": c.get("status_reason", c.get("statusReason")),
+                    "update_date": None
+                    if c.get("update_date", c.get("updateDate")) in (None, "")
+                    else parse(c.get("update_date", c.get("updateDate")))
+                    .astimezone(DEFAULT_TIME_ZONE)
+                    .replace(second=0, microsecond=0),
+                    "relative_time": c.get("relative_time", ""),
+                    "has_schedule": c.get("has_schedule", False),
+                    "has_active_schedule": c.get("has_active_schedule", False),
+                    "has_overridden_schedule": c.get("has_overridden_schedule", False),
+                    "state_localize_key": c.get("state_localize_key", ""),
+                }
+
             if old is not None:
                 old.update(new)
             ret[str(c["id"])] = old if old is not None else new

@@ -65,17 +65,22 @@ class ConfigsType(TypedDict):
     read_only: bool
 
 
-class ConnectorType(TypedDict):
+class ConnectorScheduleType(TypedDict, total=False):
+    """Extra schedule related optional fields."""
+
+    relative_time: str | None
+    has_schedule: bool | None
+    has_active_schedule: bool | None
+    has_overridden_schedule: bool | None
+
+
+class ConnectorType(ConnectorScheduleType):
     """Connector data type."""
 
     current_status: ChargeStateEnum
     update_date: datetime | None
     status_reason: StatusReasonEnum
     start_date: datetime | None
-    relative_time: str | None
-    has_schedule: bool | None
-    has_active_schedule: bool | None
-    has_overridden_schedule: bool | None
     state_localize_key: str | None
 
 
