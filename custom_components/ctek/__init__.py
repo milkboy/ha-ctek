@@ -91,9 +91,13 @@ async def async_setup_entry(
 
     hass.services.async_register(
         DOMAIN,
-        "call_api_endpoint",
+        "force_refresh",
         handle_refresh,
-        schema=vol.Schema({}),
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string]),
+            }
+        ),
     )
 
     async def handle_send_command(call: ServiceCall) -> Any:

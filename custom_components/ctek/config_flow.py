@@ -48,7 +48,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
 
     context: CtekConfigFlowContext
 
-    async def async_step_user(
+    async def async_step_user(  # type:ignore[no-untyped-def]
         self,
         user_input=None,  # noqa: ANN001
     ) -> config_entries.ConfigFlowResult:
@@ -117,7 +117,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
             errors=_errors,
         )
 
-    async def async_step_done(self, user_input=None) -> config_entries.ConfigFlowResult:  # noqa: ANN001
+    async def async_step_done(self, user_input=None) -> config_entries.ConfigFlowResult:  # type: ignore[no-untyped-def] # noqa: ANN001
         """List detected devices."""
         errors: dict[str, Any] = {}
         if self.context.get("devices") is None:

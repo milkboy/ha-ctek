@@ -97,6 +97,10 @@
     }
   },
   "services": {
+    "force_refresh": {
+      "description": "Fetch device status, reconnect webbsocket",
+      "name": "Force data refresh"
+    },
     "send_command": {
       "description": "Send arbitrary commands to the charger (well, any that the backend supports, just don't ask which, because I have no idea).",
       "fields": {
