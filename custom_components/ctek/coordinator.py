@@ -623,6 +623,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     await self.start_delayed_operation(
                         30, handle_car_quirks, tries=tries - 1
                     )
+                    return
 
                 if state == ChargeStateEnum.charging:
                     LOGGER.info("Charge has started; setting MAX current")
