@@ -95,5 +95,17 @@
         }
       }
     }
+  },
+  "services": {
+    "send_command": {
+      "name": "Send command to charger",
+      "description": "Send arbitrary commands to the charger (well, any that the backend supports, just don't ask which, because I have no idea).",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "The command (upper case, like REBOOT)"
+        }
+      }
+    }
   }
 }

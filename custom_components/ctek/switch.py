@@ -72,7 +72,7 @@ async def async_setup_entry(
     )
 
 
-class CtekSwitch(CtekEntity, SwitchEntity):  # type: ignore[misc]
+class CtekSwitch(CtekEntity, SwitchEntity):
     """ctek switch class."""
 
     _attr_is_on: bool | None

@@ -2,6 +2,8 @@
 
 from enum import Enum
 
+from .const import _LOGGER as LOGGER
+
 
 class ChargeStateEnum(Enum):
     """Enumeration of possible charge states."""
@@ -16,11 +18,11 @@ class ChargeStateEnum(Enum):
     suspended_evse = "SuspendedEVSE"
     unavailable = "Unavailable"  # May not be used
     offline = "Offline"
+    unknown = "Unknown"
 
     @staticmethod
     def find(val: str) -> "ChargeStateEnum":
-        """
-        Find and return the corresponding ChargeStateEnum member for the given value.
+        """Find and return the corresponding ChargeStateEnum member for the given value.
 
         Args:
             val (str): The value to search for, which can be either the name or
@@ -38,7 +40,8 @@ class ChargeStateEnum(Enum):
             if val in (state.value, state.name):
                 return state
         msg = f"{val} is not a valid ChargeStateEnum value"
-        raise ValueError(msg)
+        LOGGER.warning(msg)
+        return ChargeStateEnum.unknown
 
     def __str__(self) -> str:
         """Return the name of the ChargeStateEnum member."""
@@ -48,5 +51,28 @@ class ChargeStateEnum(Enum):
 class StatusReasonEnum(Enum):
     """Status reason enum."""
 
-    NO_ERROR = "NoError"
-    # FIXME: Add missing values
+    no_error = "NoError"
+    unknown = "Unknown"
+
+    @staticmethod
+    def find(val: str) -> "StatusReasonEnum":
+        """Return the corresponding StatusReasonEnum member for the given value.
+
+        Args:
+            val (str): The value to search for, which can be either the name or
+              the value of a StatusReasonEnum member.
+
+        Returns:
+            StatusReasonEnum: The corresponding StatusReasonEnum member if found.
+
+        """
+        for state in StatusReasonEnum:
+            if val in (state.value, state.name):
+                return state
+        msg = f"{val} is not a valid StatusReasonEnum value. Please report/add this."
+        LOGGER.warning(msg)
+        return StatusReasonEnum.unknown
+
+    def __str__(self) -> str:
+        """Return the name of the StatusReasonEnum member."""
+        return self.name

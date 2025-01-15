@@ -23,7 +23,7 @@ sed -i "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" custom_components/
 
 # Update const.py
 echo "Updating const.py..."
-sed -i "s/VERSION = \".*\"/VERSION = \"$NEW_VERSION\"/" custom_components/your_integration/const.py
+sed -i "s/VERSION = \".*\"/VERSION = \"$NEW_VERSION\"/" custom_components/ctek/const.py
 
 # Update setup.py if it exists
 if [ -f "setup.py" ]; then
@@ -60,7 +60,7 @@ mv "$TEMP_FILE" CHANGELOG.md
 
 # Git operations
 echo "Creating git commit..."
-git add manifest.json custom_components/your_integration/const.py CHANGELOG.md
+git add manifest.json custom_components/ctek/const.py CHANGELOG.md
 if [ -f "setup.py" ]; then
     git add setup.py
 fi

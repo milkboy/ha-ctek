@@ -255,8 +255,7 @@ class CtekApiClient:
         _assert_success(res)
 
     async def list_devices(self) -> dict:
-        """
-        Asynchronously lists the devices.
+        """Asynchronously lists the devices.
 
         Args:
             access_token (str): The access token for authentication.
@@ -317,7 +316,7 @@ class CtekApiClient:
                         json=data,
                     )
                 _verify_response_or_raise(response)
-                return await response.json()  # type: ignore[no-any-return]
+                return await response.json()
 
         except (TimeoutError, asyncio.CancelledError) as exception:
             msg = f"Timeout error during {method} - {exception}"
@@ -354,8 +353,7 @@ class CtekApiClient:
         return self._refresh_token
 
     def parse_instruction_response(self, res: dict) -> InstructionResponseType:
-        """
-        Parse the instruction response from a given dictionary.
+        """Parse the instruction response from a given dictionary.
 
         Args:
             res (dict): The response dictionary containing instruction data.

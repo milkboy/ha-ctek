@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from functools import cached_property
 from typing import TYPE_CHECKING
 
 from dateutil.parser import ParserError, parse
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.components.sensor.const import SensorDeviceClass
+from propcache import cached_property
 
 from .entity import CtekEntity, callback
 from .enums import ChargeStateEnum
@@ -26,8 +26,7 @@ if TYPE_CHECKING:
 
 
 def status_icon(status: ChargeStateEnum) -> str:
-    """
-    Get the icon corresponding to a given charge state.
+    """Get the icon corresponding to a given charge state.
 
     Args:
         status (ChargeStateEnum): The charge state for which to get the icon.
@@ -48,8 +47,7 @@ def status_icon(status: ChargeStateEnum) -> str:
 
 
 def status_icon_color(status: ChargeStateEnum) -> str:  # noqa: ARG001
-    """
-    Return the color code for the given status.
+    """Return the color code for the given status.
 
     Args:
         status (str): The status for which the color code is required.
@@ -167,7 +165,7 @@ async def async_setup_entry(
     )
 
 
-class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
+class CtekSensor(CtekEntity, SensorEntity):
     """ctek Sensor class."""
 
     def __init__(
@@ -193,7 +191,7 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
         #    self.entity_description.key
         # )
 
-    @cached_property
+    @cached_property  # type: ignore[misc]
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return the value reported by the sensor."""
         if self.device_class == SensorDeviceClass.DATE:
@@ -220,9 +218,5 @@ class CtekSensor(CtekEntity, SensorEntity):  # type: ignore[misc]
                 val = None
 
         self._attr_native_value = val
-
-        self._attr_icon_color = (
-            None if self._icon_color_func is None else self._icon_color_func(val)
-        )
 
         self.schedule_update_ha_state()

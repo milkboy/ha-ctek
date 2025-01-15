@@ -81,7 +81,7 @@ async def async_setup_entry(
     )
 
 
-class CtekBinarySensor(CtekEntity, BinarySensorEntity):  # type: ignore[misc]
+class CtekBinarySensor(CtekEntity, BinarySensorEntity):
     """ctek binary_sensor class."""
 
     def __init__(

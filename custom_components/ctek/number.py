@@ -12,7 +12,7 @@ from .data import CtekConfigEntry
 from .entity import CtekEntity, callback
 
 
-class CtekNumberEntityDescription(NumberEntityDescription):  # type: ignore[misc]
+class CtekNumberEntityDescription(NumberEntityDescription):
     """Description for Ctek number entity."""
 
     step: int = 1
@@ -59,7 +59,7 @@ async def async_setup_entry(
     )
 
 
-class CtekNumberSetting(CtekEntity, NumberEntity):  # type: ignore[misc]
+class CtekNumberSetting(CtekEntity, NumberEntity):
     """Number entity to control maximum current."""
 
     def __init__(
@@ -68,8 +68,7 @@ class CtekNumberSetting(CtekEntity, NumberEntity):  # type: ignore[misc]
         entity_description: CtekNumberEntityDescription,
         device_id: str,
     ) -> None:
-        """
-        Initialize the number entity.
+        """Initialize the number entity.
 
         :param coordinator: The data update coordinator.
         :param entity_description: The description of the entity.
@@ -80,7 +79,6 @@ class CtekNumberSetting(CtekEntity, NumberEntity):  # type: ignore[misc]
             device_id=device_id,
             entity_description=entity_description,
         )
-        """Initialize the number entity."""
         self._attr_unique_id = "device_max_current_setting"
         self._attr_native_value = 16  # Default value
 

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 OPTIONS_SCHEMA = vol.Schema({vol.Required("car_quirks"): bool})
 
 
-class CtekConfigFlowContext(config_entries.ConfigFlowContext):  # type: ignore[misc]
+class CtekConfigFlowContext(config_entries.ConfigFlowContext):
     """Set up the expected context."""
 
     username: str
@@ -40,7 +40,7 @@ class CtekConfigFlowContext(config_entries.ConfigFlowContext):  # type: ignore[m
     client: CtekApiClient
 
 
-class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[misc,call-arg]
+class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Config flow."""
 
     DOMAIN = DOMAIN
@@ -48,7 +48,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
 
     context: CtekConfigFlowContext
 
-    async def async_step_user(  # type: ignore[no-untyped-def]
+    async def async_step_user(
         self,
         user_input=None,  # noqa: ANN001
     ) -> config_entries.ConfigFlowResult:
@@ -117,7 +117,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
             errors=_errors,
         )
 
-    async def async_step_done(self, user_input=None) -> config_entries.ConfigFlowResult:  # type: ignore[no-untyped-def] # noqa: ANN001
+    async def async_step_done(self, user_input=None) -> config_entries.ConfigFlowResult:  # noqa: ANN001
         """List detected devices."""
         errors: dict[str, Any] = {}
         if self.context.get("devices") is None:
@@ -190,7 +190,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
         return CtekOptionsFlowHandler()
 
 
-class CtekOptionsFlowHandler(config_entries.OptionsFlow):  # type: ignore[misc]
+class CtekOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle an options flow for CTEK."""
 
     async def async_step_init(

@@ -68,8 +68,6 @@ class ConfigsType(TypedDict):
 class ConnectorType(TypedDict):
     """Connector data type."""
 
-    # TODO: should the dates be handled as dates?
-
     current_status: ChargeStateEnum
     update_date: datetime | None
     status_reason: StatusReasonEnum

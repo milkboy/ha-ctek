@@ -43,9 +43,7 @@ def callback(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
-class CtekDataUpdateCoordinator(
-    TimestampDataUpdateCoordinator[DataType]  # type: ignore[misc]
-):
+class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
     """Class to manage fetching data from the API."""
 
     config_entry: CtekConfigEntry
@@ -63,7 +61,6 @@ class CtekDataUpdateCoordinator(
         """Initialize the coordinator."""
         self.config_entry = config_entry
         self.device_id = config_entry.data[CONF_DEVICE_ID]
-        self.ws_connected: bool = False
         self.device_entry: dr.DeviceEntry
         self._transaction_id: int | None = None
         self._store: Store = Store(hass, 1, f"{DOMAIN}_cache")
@@ -188,6 +185,9 @@ class CtekDataUpdateCoordinator(
         new_data: DataType = copy.deepcopy(self.data)
         if data.get("type") == "chargingSessionSummary":
             LOGGER.debug("Charging session summary: %s", message)
+            if self.device_id != data.get("device_id"):
+                LOGGER.warning("Data for wrong device received")
+                return
             session_data: ChargingSessionType = {
                 "device_id": data.get("device_id"),
                 "transaction_id": data.get("transaction_id"),
@@ -209,30 +209,13 @@ class CtekDataUpdateCoordinator(
                 new_data["charging_session"] = session_data
             else:
                 new_data["charging_session"].update(session_data)
-            if (
-                self.data["charging_session"] is None
-                or new_data["charging_session"] is None
-            ) or self.data["charging_session"]["transaction_id"] != new_data[
-                "charging_session"
-            ]["transaction_id"]:
-                await self.async_request_refresh()
+
         elif data.get("type") == "connectorStatus":
             LOGGER.debug("Status update: %s", message)
             c = copy.deepcopy(
                 self.data["device_status"]["connectors"][str(data.get("id"))]
             )
-            c["update_date"] = (
-                None
-                if data.get("updateDate", None) in (None, "")
-                else parse(data.get("updateDate"))
-            )
-            c["status_reason"] = data.get("statusReason")
-            c["current_status"] = ChargeStateEnum.find(data.get("status"))
-            c["start_date"] = (
-                None
-                if data.get("startDate") in (None, "")
-                else parse(data.get("startDate"))
-            )
+            c.update(self.parse_connectors([data])[str(data.get("id"))])
             new_data["device_status"]["connectors"][str(data.get("id"))] = c
         else:
             LOGGER.error("Not implemented: %s", message)
@@ -243,6 +226,7 @@ class CtekDataUpdateCoordinator(
         """Update data via library."""
         try:
             if self.data is None or self.device_entry is None:
+                # Possibly reconfigured, so data is not there
                 await self.init_data()
                 await self.start_ws(force=True)
                 return self.data
@@ -266,7 +250,21 @@ class CtekDataUpdateCoordinator(
 
             LOGGER.debug(ret)
 
-            await self.start_ws()
+            new_tx = (
+                None
+                if ret["charging_session"] is None
+                else ret["charging_session"]["transaction_id"]
+            )
+            old_tx = (
+                None
+                if self.data["charging_session"] is None
+                else self.data["charging_session"]["transaction_id"]
+            )
+            if old_tx != new_tx:
+                LOGGER.info("Transaction id changed %s -> %s", old_tx, new_tx)
+                await self.start_ws(force=True)
+            else:
+                await self.start_ws()
 
         # TODO: fetch charging schedules
         except CtekApiClientAuthenticationError as exception:
@@ -302,18 +300,17 @@ class CtekDataUpdateCoordinator(
             callback=self.ws_message,
         )
 
-        # Start the WebSocket connection
-        await client.start()
-
         # Store the client instance
         self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client"] = client
         self.hass.data[DOMAIN][self.config_entry.entry_id]["websocket_client_start"] = (
             datetime.now(tz=DEFAULT_TIME_ZONE)
         )
 
+        # Start the WebSocket connection
+        await client.start()
+
     def cable_connected(self, connector_id: int) -> bool:
-        """
-        Check if the cable is connected for a given connector ID.
+        """Check if the cable is connected for a given connector ID.
 
         Args:
             connector_id (int): The ID of the connector to check.
@@ -332,14 +329,16 @@ class CtekDataUpdateCoordinator(
             ChargeStateEnum.unavailable,
         )
 
-    def get_property(self, key: str) -> str | bool | int | None:  # noqa: PLR0911
+    def get_property(  # noqa: PLR0911
+        self, key: str
+    ) -> str | bool | int | datetime | ChargeStateEnum | None:
         """Get property value."""
         if key.startswith("attribute."):
             key = key.removeprefix("attribute.")
             if key.startswith("cable_connected"):
-                conn = key.removeprefix("cable_connected.")
-                if conn.isnumeric():
-                    return self.cable_connected(int(conn))
+                conn_id = key.removeprefix("cable_connected.")
+                if conn_id.isnumeric():
+                    return self.cable_connected(int(conn_id))
                 LOGGER.debug("Failed to parse connector from '%s'", key)
                 return None
             LOGGER.warning("Unknown property '%s' requested", key)
@@ -355,14 +354,12 @@ class CtekDataUpdateCoordinator(
             connector = key.removeprefix("device_status.connectors.")[0]
             key = key.removeprefix(f"device_status.connectors.{connector}.")
             if key in self.data["device_status"]["connectors"][str(connector)]:
-                return self.data["device_status"]["connectors"][str(connector)][key]  # type: ignore[literal-required,no-any-return]
-            return None
+                return self.data["device_status"]["connectors"][str(connector)][key]  # type: ignore[literal-required]
 
         if key.startswith("firmware_update."):
             key = key.removeprefix("firmware_update.")
             if key in self.data["firmware_update"]:
-                return self.data["firmware_update"][key]  # type: ignore[literal-required,no-any-return]
-            return None
+                return self.data["firmware_update"][key]  # type: ignore[literal-required]
 
         if key.startswith("charging_session."):
             key = key.removeprefix("charging_session.")
@@ -370,11 +367,10 @@ class CtekDataUpdateCoordinator(
                 self.data["charging_session"] is not None
                 and key in self.data["charging_session"]
             ):
-                return self.data["charging_session"][key]  # type: ignore[literal-required,no-any-return]
-            return None
+                return self.data["charging_session"][key]  # type: ignore[literal-required]
 
         if key in self.data:
-            return self.data[key]  # type: ignore[literal-required,no-any-return]
+            return self.data[key]  # type: ignore[literal-required]
         LOGGER.debug("Property '%s' not found", key)
         return None
 
@@ -433,6 +429,8 @@ class CtekDataUpdateCoordinator(
             "configs": [],
             "charging_session": None,
         }
+        if self.data is not None:
+            ret.update(self.data)
         for d in data:
             if d["device_id"] == self.device_id:
                 ret["device_id"] = d.get("device_id")
@@ -546,8 +544,7 @@ class CtekDataUpdateCoordinator(
             self.update_configuration(c.get("key"), c.get("value"))
 
     async def start_charge(self, connector_id: int) -> None:
-        """
-        Logic for starting a charge.
+        """Logic for starting a charge.
 
         If the charge was previously stopped, or maybe waiting for a schedule, we need
         to send a different command than if the charger is waiting for authorization.
@@ -644,8 +641,7 @@ class CtekDataUpdateCoordinator(
         return res.get("accepted")
 
     async def get_connector_status(self, connector_id: int) -> ChargeStateEnum:
-        """
-        Retrieve the status of a specific connector.
+        """Retrieve the status of a specific connector.
 
         Args:
             connector_id (int): The ID of the connector to retrieve the status for.

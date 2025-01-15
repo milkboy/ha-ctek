@@ -119,7 +119,8 @@ class WebSocketClient:
         """Stop the WebSocket client."""
         self._closed = True
         if self.websocket is not None:
-            await self.websocket.close()
+            with contextlib.suppress(Exception):
+                await self.websocket.close()
         if self._task is not None:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

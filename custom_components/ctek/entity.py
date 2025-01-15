@@ -24,7 +24,7 @@ def callback(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
-class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):  # type: ignore[misc]
+class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):
     """CtekEntity class."""
 
     _icon_func: Callable[[Any], str] | None
@@ -67,9 +67,9 @@ class CtekEntity(CoordinatorEntity[CtekDataUpdateCoordinator], Entity):  # type:
         if self._icon_func is not None:
             return self._icon_func(self.state)
         if hasattr(self, "_attr_icon"):
-            return self._attr_icon  # type: ignore[no-any-return]
+            return self._attr_icon
         if hasattr(self, "entity_description"):
-            return self.entity_description.icon  # type: ignore[no-any-return]
+            return self.entity_description.icon
         return None
 
     # @property
