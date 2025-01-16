@@ -674,6 +674,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 # == ChargeStateEnum.SUSPENDED_EVSE.value,
             )
         )
+        if res.get("accepted"):
+            await self.start_ws(force=True)
         return res.get("accepted")
 
     def get_connector_status_sync(self, connector_id: int) -> ChargeStateEnum:
