@@ -173,8 +173,8 @@ class CtekConnectorSwitch(CtekSwitch):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        state = self.coordinator.get_property(
-            f"device_status.connectors.{self._connector_id}.current_status"
+        state: ChargeStateEnum | None = self.coordinator.get_connector_status_sync(
+            self._connector_id
         )
         LOGGER.debug(
             "Updating %s: %s -> %s",

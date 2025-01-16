@@ -35,6 +35,9 @@
       }
     },
     "number": {
+      "led_intensity": {
+        "name": "LED intensity"
+      },
       "max_current": {
         "name": "Max charging current"
       }
@@ -67,7 +70,7 @@
         "name": "Voltage"
       },
       "wh_consumed": {
-        "name": "Session charged Wh"
+        "name": "Session Energy"
       }
     },
     "switch": {
@@ -83,8 +86,10 @@
     "step": {
       "init": {
         "data": {
+          "app_profile": "AppProfile header for API requests",
           "enable_quirks": "Enable workarounds for misbehaving cars",
-          "log_level": "Log level"
+          "log_level": "Log level",
+          "user_agent": "UserAgent for API requests"
         },
         "title": "Configure the CTEK API extra options"
       },

@@ -13,9 +13,6 @@ OAUTH2_TOKEN_URL = "https://iot.ctek.com/oauth/token"  # noqa: S105 This is not 
 DEVICE_LIST_URL = "https://iot.ctek.com/api/v3/device/list"
 CONTROL_URL = "https://iot.ctek.com/api/v3/device/control"
 
-USER_AGENT = "CTEK App/4.0.3 (Android 11; OnePlus; ONEPLUS A3003; OnePlus3)"
-APP_PROFILE = "ctek4"
-
 WS_USER_AGENT = "okhttp/4.12.0"
 WS_URL = "wss://iot.ctek.com/api/v1/socket/devices/transaction/"
 

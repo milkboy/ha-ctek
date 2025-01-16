@@ -1,7 +1,9 @@
 """Module to define Ctek number entities for Home Assistant."""
 
+from collections.abc import Callable
+
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
-from homeassistant.const import EntityCategory, UnitOfElectricCurrent
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricCurrent
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -22,6 +24,19 @@ class CtekNumberEntityDescription(NumberEntityDescription):
 
 DEVICE_STATUS_ENTITY_DESCRIPTIONS: tuple[CtekNumberEntityDescription, ...] = ()
 LOGGER = _LOGGER.getChild("entity")
+
+
+def light_intensity_icon(status: float | None) -> str:
+    """Set icon based on led intensity."""
+    perc_50 = 50
+    perc_80 = 80
+    if status is None:
+        return "mdi:lightbulb-off"
+    if status >= perc_80:
+        return "mdi:lightbulb-on"
+    if status >= perc_50:
+        return "mdi:lightbulb-on-50"
+    return "mdi:lightbulb-on-10"
 
 
 async def async_setup_entry(
@@ -55,6 +70,22 @@ async def async_setup_entry(
                 ),
                 device_id=entry.data["device_id"],
             ),
+            CtekNumberSetting(
+                coordinator=entry.runtime_data.coordinator,
+                entity_description=CtekNumberEntityDescription(
+                    key="configs.LightIntensity",
+                    translation_key="led_intensity",
+                    has_entity_name=True,
+                    native_unit_of_measurement=PERCENTAGE,
+                    step=1,
+                    entity_category=EntityCategory.CONFIG,
+                    max_value=100,
+                    min_value=1,
+                    icon="mdi:lightbulb-on",
+                ),
+                device_id=entry.data["device_id"],
+                icon_func=light_intensity_icon,
+            ),
         ]
     )
 
@@ -67,6 +98,7 @@ class CtekNumberSetting(CtekEntity, NumberEntity):
         coordinator: CtekDataUpdateCoordinator,
         entity_description: CtekNumberEntityDescription,
         device_id: str,
+        icon_func: Callable | None = None,
     ) -> None:
         """Initialize the number entity.
 
@@ -78,17 +110,12 @@ class CtekNumberSetting(CtekEntity, NumberEntity):
             coordinator=coordinator,
             device_id=device_id,
             entity_description=entity_description,
+            icon_func=icon_func,
         )
-        self._attr_unique_id = "device_max_current_setting"
-        self._attr_native_value = 16  # Default value
-
         self._attr_native_min_value = entity_description.min_value
         self._attr_native_max_value = entity_description.max_value
         self._attr_native_step = entity_description.step
 
-        self._attr_native_unit_of_measurement = (
-            entity_description.native_unit_of_measurement
-        )
         self._attr_entity_category = entity_description.entity_category
 
     async def async_set_native_value(self, value: float) -> None:
