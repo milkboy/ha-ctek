@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.6] - 2025-01-16
+
+### Added
+
+- LED intensity setting
+
+### Fixed
+
+- Force data refresh service
+
+### Changed
+
+- Try starting charge again after reboot, if state is preparing/suspended_evse (with quirks enabled)
+
 ## [0.0.5] - 2025-01-15
 
 ### Fixed

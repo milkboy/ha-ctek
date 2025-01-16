@@ -15,6 +15,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import async_get_loaded_integration
 
 from .api import CtekApiClient
+from .config_flow import APP_PROFILE, USER_AGENT
 from .const import _LOGGER as LOGGER
 from .const import DOMAIN
 from .coordinator import CtekDataUpdateCoordinator
@@ -58,6 +59,8 @@ async def async_setup_entry(
             client_secret=entry.data["client_secret"],
             session=async_get_clientsession(hass),
             refresh_token=await coordinator.get_token(),
+            app_profile=entry.options.get("app_profile", APP_PROFILE),
+            user_agent=entry.options.get("user_agent", USER_AGENT),
         ),
         integration=async_get_loaded_integration(hass, entry.domain),
         coordinator=coordinator,
@@ -91,9 +94,13 @@ async def async_setup_entry(
 
     hass.services.async_register(
         DOMAIN,
-        "call_api_endpoint",
+        "force_refresh",
         handle_refresh,
-        schema=vol.Schema({}),
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string]),
+            }
+        ),
     )
 
     async def handle_send_command(call: ServiceCall) -> Any:
@@ -159,3 +166,51 @@ async def async_reload_entry(
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+
+
+CONFIG_VERSION = 3
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: CtekConfigEntry
+) -> bool:
+    """Migrate old entry."""
+    LOGGER.debug(
+        "Migrating configuration from version %s.%s",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+    min_version = 3
+    curr_minor = 2
+
+    if config_entry.version > CONFIG_VERSION:
+        # This means the user has downgraded from a future version
+        return False
+
+    if config_entry.version < min_version:
+        # no longer supported versions..
+        return False
+
+    if config_entry.version == CONFIG_VERSION:
+        new_data = {
+            "user_agent": USER_AGENT,
+            "app_profile": APP_PROFILE,
+        }
+
+        if config_entry.minor_version < curr_minor:
+            new_data.update({**config_entry.data})
+
+        hass.config_entries.async_update_entry(
+            config_entry,
+            data=new_data,
+            minor_version=curr_minor,
+            version=CONFIG_VERSION,
+        )
+
+    LOGGER.debug(
+        "Migration to configuration version %s.%s successful",
+        config_entry.version,
+        config_entry.minor_version,
+    )
+
+    return True

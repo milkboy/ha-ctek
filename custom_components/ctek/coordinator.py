@@ -592,7 +592,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             await self.config_entry.runtime_data.client.start_charge(
                 device_id=self.device_id,
                 connector_id=connector_id,
-                resume_charging=await self.get_connector_status(
+                resume_charging=self.get_connector_status_sync(
                     connector_id=connector_id
                 )
                 == ChargeStateEnum.suspended_evse,
@@ -606,7 +606,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
         async def handle_car_quirks(tries: int = 3) -> None:
             if tries > 0:
-                state = await self.get_connector_status(connector_id)
+                state = self.get_connector_status_sync(connector_id)
                 reboot: bool = self.config_entry.options[
                     "reboot_station_if_start_fails"
                 ]
@@ -676,7 +676,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         )
         return res.get("accepted")
 
-    async def get_connector_status(self, connector_id: int) -> ChargeStateEnum:
+    def get_connector_status_sync(self, connector_id: int) -> ChargeStateEnum:
         """Retrieve the status of a specific connector.
 
         Args:

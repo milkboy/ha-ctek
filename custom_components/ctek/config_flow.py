@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from random import choice, randint
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
@@ -25,7 +26,20 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
+devs = [
+    "Redmi Note 9 Pro",
+    "OnePlus; ONEPLUS A3003; OnePlus3",
+    "Huawei; MAR-LX1A; Huawei P30 lite",
+    "Google",
+    "Google; Pixel 7",
+    "SM-G960U",
+    "K",
+    "SAMSUNG SM-A536B",
+]
+
 OPTIONS_SCHEMA = vol.Schema({vol.Required("car_quirks"): bool})
+APP_PROFILE = "ctek4"
+USER_AGENT = f"CTEK App/4.0.3 (Android {randint(7, 14)}; {choice(devs)})"  # noqa: S311
 
 
 class CtekConfigFlowContext(config_entries.ConfigFlowContext):
@@ -45,10 +59,11 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
 
     DOMAIN = DOMAIN
     VERSION = 3
+    MINOR_VERSION = 2
 
     context: CtekConfigFlowContext
 
-    async def async_step_user(
+    async def async_step_user(  # type:ignore[no-untyped-def]
         self,
         user_input=None,  # noqa: ANN001
     ) -> config_entries.ConfigFlowResult:
@@ -62,6 +77,8 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
                     password=user_input[CONF_PASSWORD],
                     client_secret=user_input["client_secret"],
                     client_id=user_input["client_id"],
+                    app_profile=APP_PROFILE,
+                    user_agent=USER_AGENT,
                 )
             except CtekApiClientAuthenticationError as exception:
                 LOGGER.warning(exception)
@@ -117,7 +134,7 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
             errors=_errors,
         )
 
-    async def async_step_done(self, user_input=None) -> config_entries.ConfigFlowResult:  # noqa: ANN001
+    async def async_step_done(self, user_input=None) -> config_entries.ConfigFlowResult:  # type: ignore[no-untyped-def] # noqa: ANN001
         """List detected devices."""
         errors: dict[str, Any] = {}
         if self.context.get("devices") is None:
@@ -168,6 +185,8 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
         password: str,
         client_id: str,
         client_secret: str,
+        user_agent: str,
+        app_profile: str,
     ) -> None:
         """Validate credentials."""
         client = CtekApiClient(
@@ -177,6 +196,8 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
             client_secret=client_secret,
             client_id=client_id,
             session=async_create_clientsession(self.hass),
+            user_agent=user_agent,
+            app_profile=app_profile,
         )
         self.context["client"] = client
         await client.refresh_access_token()
@@ -225,6 +246,22 @@ class CtekOptionsFlowHandler(config_entries.OptionsFlow):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
+                ),
+                vol.Required(
+                    "user_agent",
+                    default=options.get("user_agent", USER_AGENT),
+                ): selector.TextSelector(
+                    selector.TextSelectorConfig(
+                        type=selector.TextSelectorType.TEXT,
+                    ),
+                ),
+                vol.Optional(
+                    "app_profile",
+                    default=options.get("app_profile", APP_PROFILE),
+                ): selector.TextSelector(
+                    selector.TextSelectorConfig(
+                        type=selector.TextSelectorType.TEXT,
+                    ),
                 ),
                 vol.Optional(
                     "enable_quirks",

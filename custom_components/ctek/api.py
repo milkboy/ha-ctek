@@ -13,12 +13,10 @@ from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import (
     _LOGGER,
-    APP_PROFILE,
     CONTROL_URL,
     DEVICE_LIST_URL,
     DOMAIN,
     OAUTH2_TOKEN_URL,
-    USER_AGENT,
     CtekApiClientAuthenticationError,
     CtekApiClientCommunicationError,
     CtekApiClientError,
@@ -77,6 +75,8 @@ class CtekApiClient:
         client_id: str,
         client_secret: str,
         session: aiohttp.ClientSession,
+        app_profile: str,
+        user_agent: str,
         refresh_token: str | None = None,
     ) -> None:
         """Sample API Client."""
@@ -88,6 +88,8 @@ class CtekApiClient:
         self._session = session
         self._access_token = None
         self._refresh_token = refresh_token
+        self._user_agent = user_agent
+        self._app_profile = app_profile
 
     async def refresh_access_token(self) -> None:
         """Refresh the access token."""
@@ -291,8 +293,8 @@ class CtekApiClient:
             headers.update(
                 {
                     "Timezone": str(DEFAULT_TIME_ZONE),
-                    "User-Agent": USER_AGENT,
-                    "App-Profile": APP_PROFILE,
+                    "User-Agent": self._user_agent,
+                    "App-Profile": self._app_profile,
                 }
             )
             if auth:
