@@ -2,11 +2,11 @@
 name: Run Tests
 
 on:
-  pull_request:
+  workflow_dispatch:
   push:
     branches:
-      - dev
-      - main
+      - "main"
+  pull_request:
 
 jobs:
   test:
@@ -14,7 +14,7 @@ jobs:
     permissions:
       # Required for PR comments
       pull-requests: write
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
@@ -44,12 +44,20 @@ jobs:
         run: |
           pytest --junitxml=pytest.xml --cov-report=xml --cov-report=term-missing | tee pytest-coverage.txt
 
-      - name: Comment on PR
-        if: github.event_name == 'pull_request'
+      - name: Coverage comment
+        id: coverage_comment
         uses: py-cov-action/python-coverage-comment-action@v3
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERAGE_PATH: coverage.xml
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Store Pull Request comment to be posted
+        uses: actions/upload-artifact@v4
+        if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        with:
+          # If you use a different name, update COMMENT_ARTIFACT_NAME accordingly
+          name: python-coverage-comment-action
+          # If you use a different name, update COMMENT_FILENAME accordingly
+          path: python-coverage-comment-action.txt
 
       - name: Check coverage threshold
         continue-on-error: true
