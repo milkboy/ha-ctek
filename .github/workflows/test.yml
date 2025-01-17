@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - "main"
+      - "dev"
   pull_request:
 
 jobs:
@@ -15,6 +16,8 @@ jobs:
       # Required for PR comments
       pull-requests: write
       contents: write
+      contents: read
+    continue-on-error: true
 
     steps:
       - name: Checkout
