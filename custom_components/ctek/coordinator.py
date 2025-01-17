@@ -80,7 +80,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
     ) -> bool:
         """Unload a config entry."""
         self._timer = None
-        client = hass.data[DOMAIN][entry.entry_id].get("websocket_client")
+        client: WebSocketClient | None = hass.data[DOMAIN][entry.entry_id].get(
+            "websocket_client"
+        )
         if client:
             await client.stop()
         return True
@@ -646,6 +648,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         # Check connector state
         # Fixme: check that a charge is actually ongoing
         self.cancel_delayed_operation()
+        status = self.get_connector_status_sync(connector_id=connector_id)
+        if status not in (ChargeStateEnum.charging, ChargeStateEnum.suspended_ev):
+            LOGGER.warning("Connector status is %s", status.value)
 
         res: InstructionResponseType = (
             await self.config_entry.runtime_data.client.stop_charge(
@@ -657,11 +662,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     .get(str(connector_id), {})
                     .get("has_active_schedule", False)
                 ),
-                # and self.data.get("device_status")
-                # .get("connectors", {})
-                # .get(str(connector_id), {})
-                # .get("current_status")
-                # == ChargeStateEnum.SUSPENDED_EVSE.value,
             )
         )
         if res.get("accepted"):
