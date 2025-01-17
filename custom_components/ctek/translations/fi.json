@@ -52,6 +52,9 @@
       }
     },
     "number": {
+      "led_intensity": {
+        "name": "LED voimakkuus"
+      },
       "max_current": {
         "name": "Enimmäislatausvirta"
       }
