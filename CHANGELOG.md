@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.7] - 2025-01-17
+
+### Added
+
+- Swedish translations
+
+### Fixed
+
+- Start and stop charge tweaks
+- Fix response parsing on charge start command
+
+### Changed
+
+- Warn on bad connector status when stopping a charge
+
 ## [0.0.6] - 2025-01-16
 
 ### Added

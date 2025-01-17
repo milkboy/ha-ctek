@@ -17,7 +17,7 @@ from homeassistant.loader import async_get_loaded_integration
 from .api import CtekApiClient
 from .config_flow import APP_PROFILE, USER_AGENT
 from .const import _LOGGER as LOGGER
-from .const import DOMAIN
+from .const import DOMAIN, VERSION
 from .coordinator import CtekDataUpdateCoordinator
 from .data import CtekData
 
@@ -42,6 +42,7 @@ async def async_setup_entry(
 ) -> bool:
     """Set up this integration using UI."""
     LOGGER.setLevel(entry.options.get("log_level", "INFO"))
+    LOGGER.info("Loading CTEK custom component (version: %s)", VERSION)
     hass.data.setdefault(DOMAIN, {})
     coordinator = CtekDataUpdateCoordinator(
         hass=hass,
