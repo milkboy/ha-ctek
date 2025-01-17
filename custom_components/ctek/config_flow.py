@@ -43,7 +43,7 @@ USER_AGENT = f"CTEK App/4.0.3 (Android {randint(7, 14)}; {choice(devs)})"  # noq
 
 
 class CtekConfigFlowContext(config_entries.ConfigFlowContext):
-    """Set up the expected context."""
+    """Set up the typed context."""
 
     username: str
     password: str
