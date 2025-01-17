@@ -1,7 +1,12 @@
 ---
 name: Run Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - dev
+      - main
 
 jobs:
   test:
@@ -45,3 +50,12 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERAGE_PATH: coverage.xml
+
+      - name: Check coverage threshold
+        continue-on-error: true
+        run: |
+          COVERAGE=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "Coverage below 80%"
+            exit 1
+          fi
