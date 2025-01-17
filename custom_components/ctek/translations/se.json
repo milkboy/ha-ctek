@@ -1,0 +1,120 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Laddaren är redan konfigurerad",
+      "cannot_connect": "Failed to connect"
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Oväntat fel"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "client_id": "Client id",
+          "client_secret": "Client secret",
+          "password": "Lösenord",
+          "username": "Användarnamn"
+        },
+        "description": "Ange ditt användarnamn+lösenord samt OAuth-klientdata.",
+        "title": "Ange CTEK API åtkomstuppgifter"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "cable_connected": {
+        "name": "Kontakt {conn} ansluten"
+      },
+      "firmware_available": {
+        "name": "Mjukvaruuppdatering tillgänglig"
+      },
+      "online": {
+        "name": "Online"
+      }
+    },
+    "number": {
+      "led_intensity": {
+        "name": "LED styrka"
+      },
+      "max_current": {
+        "name": "Högsta laddström"
+      }
+    },
+    "sensor": {
+      "connector_start_date": {
+        "name": "Kontakt {conn} starttid"
+      },
+      "connector_status": {
+        "name": "Kontakt {conn} läge",
+        "state": {
+          "available": "Ledig",
+          "charging": "Laddar",
+          "finishing": "Avslutar",
+          "preparing": "Autentikering krävs",
+          "suspended_ev": "Pausad (fordonet)",
+          "suspended_evse": "Pausad (laddaren)"
+        }
+      },
+      "current": {
+        "name": "Ström"
+      },
+      "power": {
+        "name": "Effekt"
+      },
+      "transaction_id": {
+        "name": "Transaktions ID"
+      },
+      "voltage": {
+        "name": "Spänning"
+      },
+      "wh_consumed": {
+        "name": "Laddad energi"
+      }
+    },
+    "switch": {
+      "connector_charging": {
+        "name": "Kontakt {conn} laddar"
+      },
+      "require_auth": {
+        "name": "Kräv godkännande innan laddning startas"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "app_profile": "AppProfile header for API requests",
+          "enable_quirks": "Försök kringgå problem med vissa bilar",
+          "log_level": "Loggnivå",
+          "user_agent": "UserAgent for API requests"
+        },
+        "title": "Configure the CTEK API extra options"
+      },
+      "quirks": {
+        "data": {
+          "reboot_station_if_start_fails": "Starta om station vid problem med start av laddning",
+          "start_charge_min_current": "Börja ladde med lägsta effekt"
+        }
+      }
+    }
+  },
+  "services": {
+    "force_refresh": {
+      "description": "Uppdatera laddarens data, återöppna websocket-fförbindelsen",
+      "name": "Forcera uppdatering ad data"
+    },
+    "send_command": {
+      "description": "Skicka kommando till laddaren (finns ingen dokumentation om vilka som är understödda).",
+      "fields": {
+        "command": {
+          "description": "Kommandot (versaler, t.ex. REBOOT)",
+          "name": "Kommando"
+        }
+      },
+      "name": "Skicka kommando till laddaren"
+    }
+  }
+}

@@ -80,7 +80,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
     ) -> bool:
         """Unload a config entry."""
         self._timer = None
-        client = hass.data[DOMAIN][entry.entry_id].get("websocket_client")
+        client: WebSocketClient | None = hass.data[DOMAIN][entry.entry_id].get(
+            "websocket_client"
+        )
         if client:
             await client.stop()
         return True
@@ -250,21 +252,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
             LOGGER.debug(ret)
 
-            new_tx = (
-                None
-                if ret["charging_session"] is None
-                else ret["charging_session"]["transaction_id"]
-            )
-            old_tx = (
-                None
-                if self.data["charging_session"] is None
-                else self.data["charging_session"]["transaction_id"]
-            )
-            if old_tx != new_tx:
-                LOGGER.info("Transaction id changed %s -> %s", old_tx, new_tx)
-                await self.start_ws(force=True)
-            else:
-                await self.start_ws()
+            await self.start_ws()
 
         # TODO: fetch charging schedules
         except CtekApiClientAuthenticationError as exception:
@@ -376,7 +364,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
     async def set_config(self, name: str, value: str) -> None:
         """Post a configuration change to the chager."""
-        # TODO: Don't try to update read-only values
         if name.startswith("configs."):
             name = name.replace("configs.", "")
         if self.is_readonly_configuration(name):
@@ -571,6 +558,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         to send a different command than if the charger is waiting for authorization.
 
         """
+        LOGGER.info("Trying to start a charge")
+
         # set meter value reporting to 30 s
         meter_value_interval = self.get_configuration(
             "configs.MeterValueSampleInterval"
@@ -604,6 +593,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             LOGGER.error(msg)
             raise HomeAssistantError(msg)
 
+        delay = 60
+
         async def handle_car_quirks(tries: int = 3) -> None:
             if tries > 0:
                 state = self.get_connector_status_sync(connector_id)
@@ -615,20 +606,21 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     await self.config_entry.runtime_data.client.start_charge(
                         device_id=self.device_id,
                         connector_id=connector_id,
-                        resume_charging=await self.get_connector_status(
+                        resume_charging=self.get_connector_status_sync(
                             connector_id=connector_id
                         )
                         == ChargeStateEnum.suspended_evse,
                     )
                     await self.start_delayed_operation(
-                        30, handle_car_quirks, tries=tries - 1
+                        delay=delay, func=handle_car_quirks, tries=tries - 1
                     )
                     return
 
                 if state == ChargeStateEnum.charging:
                     LOGGER.info("Charge has started; setting MAX current")
                     await self.set_config(
-                        "configs.CurrentMaxAssignment", str(self.get_max_current())
+                        name="configs.CurrentMaxAssignment",
+                        value=str(self.get_max_current()),
                     )
                     return
 
@@ -636,19 +628,20 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     LOGGER.warning(
                         "Seems like charge did not start as expected; rebooting"
                     )
-                    await self.send_command("REBOOT")
+                    await self.send_command(command="REBOOT")
                     await self.start_delayed_operation(
-                        120, handle_car_quirks, tries=tries - 1
+                        delay=2 * delay, func=handle_car_quirks, tries=tries - 1
+                    )
+                else:
+                    LOGGER.info("Charge not started; checking again in %ds", delay)
+                    await self.start_delayed_operation(
+                        delay, handle_car_quirks, tries=tries - 1
                     )
             else:
-                delay = 60
-                LOGGER.info("Charge not started; checking again in %ds", delay)
-                await self.start_delayed_operation(
-                    delay, handle_car_quirks, tries=tries - 1
-                )
+                LOGGER.warning("Start charge apparently failed")
 
         if self.config_entry.options["enable_quirks"]:
-            await self.start_delayed_operation(60, handle_car_quirks)
+            await self.start_delayed_operation(delay=delay, func=handle_car_quirks)
 
     async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
@@ -656,6 +649,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         # Check connector state
         # Fixme: check that a charge is actually ongoing
         self.cancel_delayed_operation()
+        status = self.get_connector_status_sync(connector_id=connector_id)
+        if status not in (ChargeStateEnum.charging, ChargeStateEnum.suspended_ev):
+            LOGGER.warning("Connector status is %s", status.value)
 
         res: InstructionResponseType = (
             await self.config_entry.runtime_data.client.stop_charge(
@@ -667,15 +663,10 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     .get(str(connector_id), {})
                     .get("has_active_schedule", False)
                 ),
-                # and self.data.get("device_status")
-                # .get("connectors", {})
-                # .get(str(connector_id), {})
-                # .get("current_status")
-                # == ChargeStateEnum.SUSPENDED_EVSE.value,
             )
         )
         if res.get("accepted"):
-            await self.start_ws(force=True)
+            await self.async_request_refresh()
         return res.get("accepted")
 
     def get_connector_status_sync(self, connector_id: int) -> ChargeStateEnum:

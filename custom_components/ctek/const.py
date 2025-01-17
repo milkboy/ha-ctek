@@ -16,6 +16,8 @@ CONTROL_URL = "https://iot.ctek.com/api/v3/device/control"
 WS_USER_AGENT = "okhttp/4.12.0"
 WS_URL = "wss://iot.ctek.com/api/v1/socket/devices/transaction/"
 
+VERSION = "0.0.7"
+
 
 class CtekApiClientError(Exception):
     """Exception to indicate a general API error."""
