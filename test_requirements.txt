@@ -1,0 +1,7 @@
+pre-commit==4.0.1
+pylint==3.3.3
+pytest-homeassistant-custom-component==0.13.203
+ruff==0.9.1
+pytest
+pytest-homeassistant-custom-component
+coverage
