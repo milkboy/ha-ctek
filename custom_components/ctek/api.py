@@ -147,8 +147,9 @@ class CtekApiClient:
     ) -> InstructionResponseType:
         """Set a configuration value."""
         LOGGER.debug(
-            "Trying to start charge on %s (Resume: %s, Override schedule: %s)",
+            "Trying to start charge on %s:%s (Resume: %s, Override schedule: %s)",
             device_id,
+            connector_id,
             "true" if resume_charging else "false",
             "true" if override_schedule else "false",
         )
@@ -170,9 +171,9 @@ class CtekApiClient:
             error_message = res.get("data", {}).get("error_message", None)
             msg = f"Failed to start charging: {error_code}: {error_message}"
             raise HomeAssistantError(msg)
-        LOGGER.debug(res["data"])
+        LOGGER.debug(res)
         # _assert_success(res)
-        return self.parse_instruction_response(res)
+        return self.parse_instruction_response(res["data"])
 
     async def stop_charge(
         self,
@@ -204,7 +205,7 @@ class CtekApiClient:
             error_message = res.get("data", {}).get("error_message", None)
             msg = f"Failed to stop charging: {error_code}: {error_message}"
             raise HomeAssistantError(msg)
-        LOGGER.debug(res["data"])
+        LOGGER.debug(res)
         # _assert_success(res)
         return self.parse_instruction_response(res["data"])
 

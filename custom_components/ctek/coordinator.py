@@ -364,7 +364,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
     async def set_config(self, name: str, value: str) -> None:
         """Post a configuration change to the chager."""
-        # TODO: Don't try to update read-only values
         if name.startswith("configs."):
             name = name.replace("configs.", "")
         if self.is_readonly_configuration(name):
@@ -559,6 +558,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         to send a different command than if the charger is waiting for authorization.
 
         """
+        LOGGER.info("Trying to start a charge")
+
         # set meter value reporting to 30 s
         meter_value_interval = self.get_configuration(
             "configs.MeterValueSampleInterval"
