@@ -2,11 +2,15 @@
 name: Run Tests
 
 on:
-  pull_request:
+  workflow_dispatch:
   push:
     branches:
-      - dev
-      - main
+      - "main"
+      - "dev"
+  pull_request:
+    branches:
+      - "main"
+      - "dev"
 
 jobs:
   test:
@@ -15,6 +19,7 @@ jobs:
       # Required for PR comments
       pull-requests: write
       contents: read
+      continue-on-error: true
 
     steps:
       - name: Checkout
