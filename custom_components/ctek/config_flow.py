@@ -288,16 +288,32 @@ class CtekOptionsFlowHandler(config_entries.OptionsFlow):
                     "start_charge_min_current",
                     default=options.get(
                         "start_charge_min_current",
-                        options.get("start_charge_min_current"),
+                        False,
                     ),
                 ): bool,
                 vol.Required(
                     "reboot_station_if_start_fails",
                     default=options.get(
                         "reboot_station_if_start_fails",
-                        options.get("reboot_station_if_start_fails", False),
+                        False,
                     ),
                 ): bool,
+                vol.Optional(
+                    "quirks_toggle_switch",
+                    default=options.get(
+                        "quirks_toggle_switch",
+                        None,
+                    ),
+                ): selector.EntitySelector(
+                    selector.EntityFilterSelectorConfig(domain="switch")
+                ),
+                vol.Optional(
+                    "quirks_call_service",
+                    default=options.get(
+                        "quirks_call_service",
+                        None,
+                    ),
+                ): selector.ActionSelector(selector.ActionSelectorConfig()),
             }
         )
 
