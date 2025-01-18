@@ -1,7 +1,3 @@
 colorlog==6.9.0
 pip>=21.3.1
-pre-commit==4.0.1
-pylint==3.3.3
-pytest-homeassistant-custom-component==0.13.203
-ruff==0.9.2
 websockets==14.1
