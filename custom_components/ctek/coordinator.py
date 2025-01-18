@@ -629,7 +629,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 if state == ChargeStateEnum.charging:
                     LOGGER.info("Charge has started; setting MAX current")
                     await self.set_config(
-                        name="configs.CurrentMaxAssignment",
+                        name="configs.CurrentAssignment",
                         value=str(self.get_max_current()),
                     )
                     return
