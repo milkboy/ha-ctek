@@ -33,6 +33,8 @@
       },
       "quirks": {
         "data": {
+          "quirks_call_service": "Suorita toimenpide",
+          "quirks_toggle_switch": "Käännä kytkin",
           "start_charge_min_current": "Käynnistä lataus pienimmällä virralla",
           "reboot_station_if_start_fails": "Käynnistä asema uudestaan jos lataus ei käynnisty"
         }

@@ -95,6 +95,8 @@
       },
       "quirks": {
         "data": {
+          "quirks_call_service": "Starta funktion",
+          "quirks_toggle_switch": "Växla brytare",
           "reboot_station_if_start_fails": "Starta om station vid problem med start av laddning",
           "start_charge_min_current": "Börja ladde med lägsta effekt"
         }
