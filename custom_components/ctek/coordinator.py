@@ -11,6 +11,8 @@ from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.service import async_call_from_config
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
     import asyncio
     from collections.abc import Callable
 
+    from homeassistant.components.switch import SwitchEntity
     from homeassistant.core import HomeAssistant
 
     from .data import CtekConfigEntry
@@ -561,18 +564,10 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         LOGGER.info("Trying to start a charge")
 
         # set meter value reporting to 30 s
-        meter_value_interval = self.get_configuration(
-            "configs.MeterValueSampleInterval"
-        )
-        if meter_value_interval not in (30, "30"):
-            await self.set_config("configs.MeterValueSampleInterval", "30")
+        await self.set_config("configs.MeterValueSampleInterval", "30")
 
         if self.config_entry.options["enable_quirks"]:
             LOGGER.info("Quirks enabled")
-            LOGGER.debug("Setting minimum current")
-            await self.set_config(
-                "configs.CurrentMaxAssignment", str(self.get_min_current())
-            )
 
         # send start command
         # SuspendedEVSE -> needs to resume
@@ -589,20 +584,38 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         )
 
         if not res["accepted"]:
-            msg = "Start charge failed?"
+            msg = "Charger refused or failed the request"
             LOGGER.error(msg)
             raise HomeAssistantError(msg)
 
         delay = 60
 
-        async def handle_car_quirks(tries: int = 3) -> None:
+        async def handle_car_quirks(
+            tries: int = 3, tried_quirks: list | None = None
+        ) -> None:
+            if tried_quirks is None:
+                tried_quirks = []
             if tries > 0:
+                LOGGER.info("Trying quirks. Already tried: %s", tried_quirks)
                 state = self.get_connector_status_sync(connector_id)
                 reboot: bool = self.config_entry.options[
                     "reboot_station_if_start_fails"
                 ]
+                toggle: str | None = self.config_entry.options.get(
+                    "quirks_toggle_switch"
+                )
+                service_action: list[dict] | None = self.config_entry.options.get(
+                    "quirks_call_service"  # action is name, data contains args as dict
+                )
+
                 if state in (ChargeStateEnum.suspended_evse, ChargeStateEnum.preparing):
                     LOGGER.info("Charge is not started. Trying again")
+                    await self.start_delayed_operation(
+                        delay=delay,
+                        func=handle_car_quirks,
+                        tries=tries - 1,
+                        tried_quirks=tried_quirks,
+                    )
                     await self.config_entry.runtime_data.client.start_charge(
                         device_id=self.device_id,
                         connector_id=connector_id,
@@ -610,9 +623,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                             connector_id=connector_id
                         )
                         == ChargeStateEnum.suspended_evse,
-                    )
-                    await self.start_delayed_operation(
-                        delay=delay, func=handle_car_quirks, tries=tries - 1
                     )
                     return
 
@@ -624,21 +634,72 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                     )
                     return
 
-                if state == ChargeStateEnum.suspended_ev and reboot:
+                if (
+                    state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
+                    and toggle is not None
+                    and "toggle" not in tried_quirks
+                ):
+                    LOGGER.warning("Toggling switch: %s", toggle)
+                    tried_quirks.append("toggle")
+                    await self.start_delayed_operation(
+                        delay,
+                        handle_car_quirks,
+                        tries=tries - 1,
+                        tried_quirks=tried_quirks,
+                    )
+
+                    registry = er.async_get(self.hass)
+                    switch: SwitchEntity = registry.async_get(toggle)
+                    switch.toggle()
+                    return
+
+                if (
+                    state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
+                    and service_action is not None
+                    and service_action != []
+                    and "service_action" not in tried_quirks
+                ):
+                    LOGGER.warning("Calling service: %s", service_action)
+                    tried_quirks.append("service_action")
+                    service_call = {
+                        "service": service_action[0].get("action"),
+                        "data": service_action[0].get("data", {}),
+                    }
+
+                    await self.start_delayed_operation(
+                        delay,
+                        handle_car_quirks,
+                        tries=tries - 1,
+                        tried_quirks=tried_quirks,
+                    )
+                    await async_call_from_config(self.hass, service_call)
+                    return
+
+                if (
+                    state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
+                    and reboot
+                    and "reboot" not in tried_quirks
+                ):
+                    tried_quirks.append("reboot")
                     LOGGER.warning(
                         "Seems like charge did not start as expected; rebooting"
                     )
                     await self.send_command(command="REBOOT")
                     await self.start_delayed_operation(
-                        delay=2 * delay, func=handle_car_quirks, tries=tries - 1
+                        delay=2 * delay,
+                        func=handle_car_quirks,
+                        tries=tries - 1,
+                        tried_quirks=tried_quirks,
                     )
-                else:
-                    LOGGER.info("Charge not started; checking again in %ds", delay)
-                    await self.start_delayed_operation(
-                        delay, handle_car_quirks, tries=tries - 1
-                    )
-            else:
-                LOGGER.warning("Start charge apparently failed")
+                    return
+
+                LOGGER.warning("Charge not started; checking again in %ds", delay)
+                await self.start_delayed_operation(
+                    delay, handle_car_quirks, tries=tries - 1, tried_quirks=tried_quirks
+                )
+                return
+
+            LOGGER.error("Start charge apparently failed")
 
         if self.config_entry.options["enable_quirks"]:
             await self.start_delayed_operation(delay=delay, func=handle_car_quirks)

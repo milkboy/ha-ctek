@@ -96,7 +96,9 @@
       "quirks": {
         "data": {
           "start_charge_min_current": "Start charge using minimum supported current",
-          "reboot_station_if_start_fails": "Try rebooting the station if starting a charge fails"
+          "reboot_station_if_start_fails": "Try rebooting the station if starting a charge fails",
+          "quirks_toggle_switch": "Toggle switch",
+          "quirks_call_service": "Call a service"
         }
       }
     }
