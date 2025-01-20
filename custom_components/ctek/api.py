@@ -1,4 +1,4 @@
-"""Sample API Client."""
+"""API Client."""
 
 from __future__ import annotations
 
@@ -90,6 +90,9 @@ class CtekApiClient:
         self._refresh_token = refresh_token
         self._user_agent = user_agent
         self._app_profile = app_profile
+
+    def _set_session(self, sess: aiohttp.ClientSession) -> None:
+        self._session = sess
 
     async def refresh_access_token(self) -> None:
         """Refresh the access token."""

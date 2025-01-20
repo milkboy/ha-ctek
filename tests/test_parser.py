@@ -26,7 +26,7 @@ def connector_with_reason():
     return {
         "id": "1",
         "status": "Unavailable",
-        "statusReason": "Maintenance",
+        "statusReason": "NoError",
         "startDate": "2025-01-20T12:00:00Z",
         "updateDate": "2025-01-20T12:05:00Z",
         "stateLocalizeKey": "maintenance",
@@ -105,7 +105,7 @@ def test_parse_connectors_with_reason(connector_with_reason):
     """Test connector parsing with status reason."""
     result = parse_connectors([connector_with_reason])
 
-    assert result["1"]["status_reason"] == "Maintenance"
+    assert result["1"]["status_reason"] == StatusReasonEnum.no_error
     assert result["1"]["state_localize_key"] == "maintenance"
 
 
