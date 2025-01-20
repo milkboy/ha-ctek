@@ -6,7 +6,7 @@ from dateutil.parser import parse
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import _LOGGER
-from .data import ChargingSessionType, ConnectorType, DataType
+from .data import ChargingSessionType, ConnectorType, DataType, InstructionResponseType
 from .enums import ChargeStateEnum, StatusReasonEnum
 
 LOGGER = _LOGGER.getChild("parser")
@@ -184,3 +184,41 @@ def parse_ws_message(data: dict, device_id: str, old_data: DataType) -> DataType
         LOGGER.error("Not implemented: %s", data)
 
     return old_data
+
+
+def parse_instruction_response(res: dict) -> InstructionResponseType:
+    """Parse the instruction response from a given dictionary.
+
+    Args:
+        res (dict): The response dictionary containing instruction data.
+
+    Returns:
+        InstructionResponseType: A dictionary containing parsed instruction
+          response data.
+
+    """
+    data: InstructionResponseType = {
+        "device_id": res.get("device_id", ""),
+        "information": res.get("information", {}),
+        "instruction": {
+            "connector_id": res.get("instruction", {}).get("connector_id"),
+            "device_id": res.get("instruction", {}).get("device_id"),
+            "info": {
+                "firmware": res.get("instruction", {}).get("info", {}).get("firmware"),
+                "id": res.get("instruction", {}).get("info", {}).get("id"),
+                "key": res.get("instruction", {}).get("info", {}).get("key"),
+                "units": res.get("instruction", {}).get("info", {}).get("units"),
+                "value": res.get("instruction", {}).get("info", {}).get("value"),
+            },
+            "id": res.get("instruction", {}).get("id"),
+            "instruction": res.get("instruction", {}).get("instruction"),
+            "timeout": res.get("instruction", {}).get("timeout"),
+            "transaction_id": res.get("instruction", {}).get("transaction_id"),
+            "user_id": res.get("instruction", {}).get("user_id"),
+            "user_id_is_owner": res.get("instruction", {}).get("user_id_is_owner"),
+        },
+        "ocpp": {},
+        "accepted": res.get("accepted"),
+    }
+
+    return data
