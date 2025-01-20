@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.8] - 2025-01-20
+
+### Added
+
+- Tests
+- Test coverage checks
+
+### Fixed
+
+- Set the correct property when "start with minimum current" quirk is enabled
+
+### Changed
+
+- Improved GitHub actions
+- Small refactoring
+- Update dependencies
+
 ## [0.0.7] - 2025-01-17
 
 ### Added
