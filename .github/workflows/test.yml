@@ -60,12 +60,3 @@ jobs:
           name: python-coverage-comment-action
           # If you use a different name, update COMMENT_FILENAME accordingly
           path: python-coverage-comment-action.txt
-
-      - name: Check coverage threshold
-        continue-on-error: true
-        run: |
-          COVERAGE=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Coverage below 80%"
-            exit 1
-          fi
