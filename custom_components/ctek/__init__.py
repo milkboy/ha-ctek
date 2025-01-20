@@ -150,9 +150,9 @@ async def async_unload_entry(
     """Handle removal of an entry."""
     LOGGER.info(f"Unloading {DOMAIN} integration")
 
-    client: WebSocketClient | None = hass.data[DOMAIN][entry.entry_id][
-        "websocket_client"
-    ]
+    client: WebSocketClient | None = (
+        hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("websocket_client")
+    )
     # Cleanup code, close connections, etc.
     if client is not None:
         await client.stop()

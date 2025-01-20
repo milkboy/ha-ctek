@@ -168,7 +168,11 @@ class CtekConnectorSwitch(CtekSwitch):
         """Return true if the switch is on."""
         return self.coordinator.get_property(
             f"device_status.connectors.{self._connector_id}.current_status"
-        ) in (ChargeStateEnum.charging, ChargeStateEnum.charging)
+        ) in (
+            ChargeStateEnum.charging,
+            ChargeStateEnum.preparing,
+            ChargeStateEnum.suspended_ev,
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
