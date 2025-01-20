@@ -4,8 +4,10 @@ from copy import deepcopy
 from datetime import datetime
 
 import pytest
+from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
-from custom_components.ctek.enums import ChargeStateEnum
+from custom_components.ctek.data import DataType
+from custom_components.ctek.enums import ChargeStateEnum, StatusReasonEnum
 from custom_components.ctek.parser import parse_connectors, parse_data, parse_ws_message
 
 
@@ -152,7 +154,7 @@ def test_parse_ws_message_charging_session_update(
     assert result["charging_session"]["watt_hours_consumed"] == 1000
 
 
-def test_parse_ws_message_connector_status(
+def test_parse_ws_message_connector_status_new(
     connector_status_message_charging, basic_device_data
 ):
     """Test parsing websocket connector status message."""
@@ -165,4 +167,39 @@ def test_parse_ws_message_connector_status(
     assert (
         result["device_status"]["connectors"]["1"]["current_status"]
         == ChargeStateEnum.charging
+    )
+
+
+def test_parse_ws_message_connector_update(
+    connector_status_message_charging, basic_device_data: DataType
+):
+    """Test parsing websocket connector status message."""
+    device_id = "test_device"
+
+    basic_device_data["device_status"] = {
+        "connected": False,
+        "connectors": {
+            "1": {
+                "current_status": ChargeStateEnum.offline,
+                "update_date": datetime.now(tz=DEFAULT_TIME_ZONE),
+                "status_reason": StatusReasonEnum.unknown,
+                "start_date": None,
+                "state_localize_key": "",
+            }
+        },
+        "load_balancing_onboarded": False,
+        "third_party_ocpp_status": {"external_ocpp": False},
+    }
+
+    result = parse_ws_message(
+        connector_status_message_charging, device_id, basic_device_data
+    )
+
+    assert (
+        result["device_status"]["connectors"]["1"]["current_status"]
+        == ChargeStateEnum.charging
+    )
+    assert (
+        result["device_status"]["connectors"]["1"]["status_reason"]
+        == StatusReasonEnum.no_error
     )

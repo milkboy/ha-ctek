@@ -7,7 +7,7 @@ from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import _LOGGER
 from .data import ChargingSessionType, ConnectorType, DataType
-from .enums import ChargeStateEnum
+from .enums import ChargeStateEnum, StatusReasonEnum
 
 LOGGER = _LOGGER.getChild("parser")
 
@@ -28,7 +28,7 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
                 else parse(c.get("startDate"))
                 .astimezone(DEFAULT_TIME_ZONE)
                 .replace(second=0, microsecond=0),
-                "status_reason": c.get("statusReason"),
+                "status_reason": StatusReasonEnum.find(c.get("statusReason")),
                 "update_date": None
                 if c.get("updateDate") in (None, "")
                 else parse(c.get("updateDate")).astimezone(DEFAULT_TIME_ZONE),
@@ -42,7 +42,9 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
                 else parse(c.get("start_date", c.get("startDate")))
                 .astimezone(DEFAULT_TIME_ZONE)
                 .replace(second=0, microsecond=0),
-                "status_reason": c.get("status_reason", c.get("statusReason")),
+                "status_reason": StatusReasonEnum.find(
+                    c.get("status_reason", c.get("statusReason"))
+                ),
                 "update_date": None
                 if c.get("update_date", c.get("updateDate")) in (None, "")
                 else parse(c.get("update_date", c.get("updateDate")))
