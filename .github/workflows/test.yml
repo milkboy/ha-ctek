@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "main"
-      - "dev"
+      - main
+      - dev
   pull_request:
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: "actions/checkout@v4.2.2"
+        uses: actions/checkout@v4.2.2
 
       - name: Set up Python
         uses: actions/setup-python@v5.3.0
@@ -53,19 +53,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Store Pull Request comment to be posted
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.0
         if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
         with:
           # If you use a different name, update COMMENT_ARTIFACT_NAME accordingly
           name: python-coverage-comment-action
           # If you use a different name, update COMMENT_FILENAME accordingly
           path: python-coverage-comment-action.txt
-
-      - name: Check coverage threshold
-        continue-on-error: true
-        run: |
-          COVERAGE=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Coverage below 80%"
-            exit 1
-          fi

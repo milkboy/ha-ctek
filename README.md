@@ -14,3 +14,7 @@ Totally not a quick hack that may or may not work.
 ### Installation
 
 As most custom components
+
+### Known issues
+
+Multiple device support not quite implemented. A single configuration / device is currently the only way.
