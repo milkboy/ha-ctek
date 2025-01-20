@@ -7,7 +7,6 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from dateutil.parser import parse
 from homeassistant.const import CONF_DEVICE_ID
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
@@ -23,19 +22,22 @@ from homeassistant.util.dt import DEFAULT_TIME_ZONE
 from .api import CtekApiClientAuthenticationError, CtekApiClientError
 from .const import _LOGGER, DOMAIN, WS_URL
 from .enums import ChargeStateEnum
+from .parser import parse_data, parse_ws_message
 
 if TYPE_CHECKING:
     import asyncio
     from collections.abc import Callable
 
-    from homeassistant.components.switch import SwitchEntity
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_registry import RegistryEntry
 
     from .data import CtekConfigEntry
 
 from datetime import timedelta
 
-from .data import ChargingSessionType, ConnectorType, DataType, InstructionResponseType
+from homeassistant.components.switch import SwitchEntity
+
+from .data import DataType, InstructionResponseType
 from .ws import WebSocketClient
 
 LOGGER = _LOGGER.getChild("coordinator")
@@ -122,8 +124,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
     async def get_token(self) -> str | None:
         """Retrieve the refresh token."""
+        stored: dict | None = None
         if self._data == {}:
-            stored: dict | None = await self._store.async_load()
+            stored = await self._store.async_load()
         if stored is not None:
             self._data = stored
         return self._data.get("refresh_token")
@@ -136,9 +139,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             if self.device_id != device["device_id"]:
                 continue
 
-            self.data = self.parse_data(d)
+            self.data = parse_data(self.data, self.device_id, d)
 
-            self.data["configs"] = (
+            self.data["configs"] = [
                 (
                     await self.config_entry.runtime_data.client.get_configuration(
                         device_id=device["device_id"]
@@ -146,7 +149,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 )
                 .get("data", {})
                 .get("configurations", {})
-            )
+            ]
 
             if self.hass.data.get(DOMAIN) is None:
                 self.hass.data[DOMAIN] = {}
@@ -185,47 +188,14 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         return False
 
     async def ws_message(self, message: str) -> None:
-        """Process the incoming message."""
-        data = json.loads(message)
-        new_data: DataType = copy.deepcopy(self.data)
-        if data.get("type") == "chargingSessionSummary":
-            LOGGER.debug("Charging session summary: %s", message)
-            if self.device_id != data.get("device_id"):
-                LOGGER.warning("Data for wrong device received")
-                return
-            session_data: ChargingSessionType = {
-                "device_id": data.get("device_id"),
-                "transaction_id": data.get("transaction_id"),
-                "device_online": data.get("device_online"),
-                "last_updated_time": None
-                if data.get("last_update_time", None) in ("", None)
-                else parse(data.get("last_update_time")),
-                "momentary_current": data.get("momentary_current"),
-                "momentary_power": data.get("momentary_power"),
-                "momentary_voltage": data.get("momentary_voltage"),
-                "ongoing_transaction": data.get("ongoing_transaction"),
-                "start_time": None
-                if data.get("start_time", None) in ("", None)
-                else parse(data.get("start_time")),
-                "type": data.get("type"),
-                "watt_hours_consumed": data.get("watt_hours_consumed"),
-            }
-            if new_data["charging_session"] is None:
-                new_data["charging_session"] = session_data
-            else:
-                new_data["charging_session"].update(session_data)
-
-        elif data.get("type") == "connectorStatus":
-            LOGGER.debug("Status update: %s", message)
-            c = copy.deepcopy(
-                self.data["device_status"]["connectors"][str(data.get("id"))]
+        """Update data from WS message."""
+        self.async_set_updated_data(
+            parse_ws_message(
+                data=json.loads(message),
+                device_id=self.device_id,
+                old_data=copy.deepcopy(self.data),
             )
-            c.update(self.parse_connectors([data])[str(data.get("id"))])
-            new_data["device_status"]["connectors"][str(data.get("id"))] = c
-        else:
-            LOGGER.error("Not implemented: %s", message)
-
-        self.async_set_updated_data(new_data)
+        )
 
     async def _async_update_data(self) -> Any:
         """Update data via library."""
@@ -250,7 +220,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
             d = devices.get("data", [])
             ret = copy.copy(self.data)
-            ret.update(self.parse_data(d))
+            ret.update(parse_data(self.data, self.device_id, d))
             ret.update({"configs": configs})
 
             LOGGER.debug(ret)
@@ -366,7 +336,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         return None
 
     async def set_config(self, name: str, value: str) -> None:
-        """Post a configuration change to the chager."""
+        """Post a configuration change to the charger."""
         if name.startswith("configs."):
             name = name.replace("configs.", "")
         if self.is_readonly_configuration(name):
@@ -390,123 +360,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         new_data = self.data
         new_data["configs"] = conf
         self.async_set_updated_data(new_data)
-
-    def parse_data(self, data: list) -> DataType:
-        """Parse data."""
-        ret: DataType = {
-            "device_id": "",
-            "device_alias": "",
-            "device_type": "",
-            "hardware_id": "",
-            "firmware_id": "",
-            "model": "",
-            "standardized_model": "",
-            "number_of_connectors": 0,
-            "firmware_version": "",
-            "device_status": {
-                "connected": False,
-                "connectors": {},
-                "load_balancing_onboarded": False,
-                "third_party_ocpp_status": {"external_ocpp": False},
-            },
-            "firmware_update": {"update_available": False},
-            "has_schedules": False,
-            "device_info": {
-                "mac_address": "",
-                "passkey": "",
-            },
-            "owner": False,
-            "configs": [],
-            "charging_session": None,
-        }
-        if self.data is not None:
-            ret.update(self.data)
-        for d in data:
-            if d["device_id"] == self.device_id:
-                ret["device_id"] = d.get("device_id")
-                ret["device_alias"] = d.get("device_alias")
-                ret["device_type"] = d.get("device_type")
-                ret["hardware_id"] = d.get("hardware_id")
-                ret["firmware_id"] = d.get("firmware_id")
-                ret["model"] = d.get("model")
-                ret["standardized_model"] = d.get("standardized_model")
-                ret["number_of_connectors"] = d.get("number_of_connectors")
-                ret["firmware_version"] = d.get("firmware_version")
-                ret["device_status"] = {
-                    "connected": d.get("device_status").get("connected"),
-                    "connectors": self.parse_connectors(
-                        d.get("device_status").get("connectors")
-                    ),
-                    "load_balancing_onboarded": d.get("device_status").get(
-                        "load_balancing_onboarded"
-                    ),
-                    "third_party_ocpp_status": {
-                        "external_ocpp": (
-                            d.get("device_status")
-                            .get("third_party_ocpp_status")
-                            .get("external_ocpp")
-                        )
-                    },
-                }
-                ret["firmware_update"] = {
-                    "update_available": d.get("firmware_update").get("update_available")
-                }
-                ret["has_schedules"] = d.get("has_schedules")
-                ret["device_info"] = {
-                    "mac_address": d.get("device_info").get("mac_address"),
-                    "passkey": d.get("device_info").get("passkey"),
-                }
-                ret["owner"] = d.get("owner")
-                break
-        return ret
-
-    def parse_connectors(self, connectors: list) -> dict[str, ConnectorType]:
-        """Parse connector related data."""
-        ret: dict[str, ConnectorType] = {}
-        for c in connectors:
-            old: ConnectorType | None = None
-            new: ConnectorType
-            if ret.get(str(c["id"]), None) is not None:
-                old = copy.deepcopy(ret[str(c["id"])])
-            if c.get("statusReason") is not None:
-                new = {
-                    "current_status": ChargeStateEnum.find(c.get("status")),
-                    "start_date": None
-                    if c.get("startDate") in (None, "")
-                    else parse(c.get("startDate"))
-                    .astimezone(DEFAULT_TIME_ZONE)
-                    .replace(second=0, microsecond=0),
-                    "status_reason": c.get("statusReason"),
-                    "update_date": None
-                    if c.get("updateDate") in (None, "")
-                    else parse(c.get("updateDate")).astimezone(DEFAULT_TIME_ZONE),
-                    "state_localize_key": c.get("stateLocalizeKey", ""),
-                }
-            else:
-                new = {
-                    "current_status": ChargeStateEnum.find(c.get("current_status")),
-                    "start_date": None
-                    if c.get("start_date", c.get("startDate")) in (None, "")
-                    else parse(c.get("start_date", c.get("startDate")))
-                    .astimezone(DEFAULT_TIME_ZONE)
-                    .replace(second=0, microsecond=0),
-                    "status_reason": c.get("status_reason", c.get("statusReason")),
-                    "update_date": None
-                    if c.get("update_date", c.get("updateDate")) in (None, "")
-                    else parse(c.get("update_date", c.get("updateDate")))
-                    .astimezone(DEFAULT_TIME_ZONE)
-                    .replace(second=0, microsecond=0),
-                    "relative_time": c.get("relative_time", ""),
-                    "has_schedule": c.get("has_schedule", False),
-                    "has_active_schedule": c.get("has_active_schedule", False),
-                    "has_overridden_schedule": c.get("has_overridden_schedule", False),
-                    "state_localize_key": c.get("state_localize_key", ""),
-                }
-
-            if old is not None:
-                old.update(new)
-            ret[str(c["id"])] = old if old is not None else new
-        return ret
 
     def get_configuration(self, key: str) -> str | int | None:
         """Get configuration value."""
@@ -554,6 +407,122 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         for c in values:
             self.update_configuration(c.get("key"), c.get("value"))
 
+    async def handle_car_quirks(
+        self,
+        connector_id: int,
+        tries: int = 3,
+        tried_quirks: list | None = None,
+        delay: int = 60,
+    ) -> None:
+        """Handle optional required quirks for starting a charge properly."""
+        if tried_quirks is None:
+            tried_quirks = []
+        if tries > 0:
+            LOGGER.info("Trying quirks. Already tried: %s", tried_quirks)
+            state = self.get_connector_status_sync(connector_id)
+            reboot: bool = self.config_entry.options["reboot_station_if_start_fails"]
+            toggle: str | None = self.config_entry.options.get("quirks_toggle_switch")
+            service_action: list[dict] | None = self.config_entry.options.get(
+                "quirks_call_service"  # action is name, data contains args as dict
+            )
+
+            if state in (ChargeStateEnum.suspended_evse, ChargeStateEnum.preparing):
+                LOGGER.info("Charge is not started. Trying again")
+                await self.start_delayed_operation(
+                    delay=delay,
+                    func=self.handle_car_quirks,
+                    tries=tries - 1,
+                    tried_quirks=tried_quirks,
+                )
+                await self.config_entry.runtime_data.client.start_charge(
+                    device_id=self.device_id,
+                    connector_id=connector_id,
+                    resume_charging=self.get_connector_status_sync(
+                        connector_id=connector_id
+                    )
+                    == ChargeStateEnum.suspended_evse,
+                )
+                return
+
+            if state == ChargeStateEnum.charging:
+                LOGGER.info("Charge has started; setting MAX current")
+                await self.set_config(
+                    name="configs.CurrentAssignment",
+                    value=str(self.get_max_current()),
+                )
+                return
+
+            if (
+                state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
+                and toggle is not None
+                and "toggle" not in tried_quirks
+            ):
+                LOGGER.warning("Toggling switch: %s", toggle)
+                tried_quirks.append("toggle")
+                await self.start_delayed_operation(
+                    delay,
+                    self.handle_car_quirks,
+                    tries=tries - 1,
+                    tried_quirks=tried_quirks,
+                )
+
+                registry = er.async_get(self.hass)
+                switch: RegistryEntry | None = registry.async_get(toggle)
+                if switch is not SwitchEntity:
+                    LOGGER.warning("Switch '%s' not found or not a switch", toggle)
+                else:
+                    switch.toggle()
+                return
+
+            if (
+                state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
+                and service_action is not None
+                and service_action != []
+                and "service_action" not in tried_quirks
+            ):
+                LOGGER.warning("Calling service: %s", service_action)
+                tried_quirks.append("service_action")
+                service_call = {
+                    "service": service_action[0].get("action"),
+                    "data": service_action[0].get("data", {}),
+                }
+
+                await self.start_delayed_operation(
+                    delay,
+                    self.handle_car_quirks,
+                    tries=tries - 1,
+                    tried_quirks=tried_quirks,
+                )
+                await async_call_from_config(self.hass, service_call)
+                return
+
+            if (
+                state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
+                and reboot
+                and "reboot" not in tried_quirks
+            ):
+                tried_quirks.append("reboot")
+                LOGGER.warning("Seems like charge did not start as expected; rebooting")
+                await self.send_command(command="REBOOT")
+                await self.start_delayed_operation(
+                    delay=2 * delay,
+                    func=self.handle_car_quirks,
+                    tries=tries - 1,
+                    tried_quirks=tried_quirks,
+                )
+                return
+
+            LOGGER.warning("Charge not started; checking again in %ds", delay)
+            await self.start_delayed_operation(
+                delay,
+                self.handle_car_quirks,
+                tries=tries - 1,
+                tried_quirks=tried_quirks,
+            )
+            return
+
+        LOGGER.error("Start charge apparently failed")
+
     async def start_charge(self, connector_id: int) -> None:
         """Logic for starting a charge.
 
@@ -565,9 +534,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
         # set meter value reporting to 30 s
         await self.set_config("configs.MeterValueSampleInterval", "30")
-
-        if self.config_entry.options["enable_quirks"]:
-            LOGGER.info("Quirks enabled")
 
         # send start command
         # SuspendedEVSE -> needs to resume
@@ -588,121 +554,11 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             LOGGER.error(msg)
             raise HomeAssistantError(msg)
 
-        delay = 60
-
-        async def handle_car_quirks(
-            tries: int = 3, tried_quirks: list | None = None
-        ) -> None:
-            if tried_quirks is None:
-                tried_quirks = []
-            if tries > 0:
-                LOGGER.info("Trying quirks. Already tried: %s", tried_quirks)
-                state = self.get_connector_status_sync(connector_id)
-                reboot: bool = self.config_entry.options[
-                    "reboot_station_if_start_fails"
-                ]
-                toggle: str | None = self.config_entry.options.get(
-                    "quirks_toggle_switch"
-                )
-                service_action: list[dict] | None = self.config_entry.options.get(
-                    "quirks_call_service"  # action is name, data contains args as dict
-                )
-
-                if state in (ChargeStateEnum.suspended_evse, ChargeStateEnum.preparing):
-                    LOGGER.info("Charge is not started. Trying again")
-                    await self.start_delayed_operation(
-                        delay=delay,
-                        func=handle_car_quirks,
-                        tries=tries - 1,
-                        tried_quirks=tried_quirks,
-                    )
-                    await self.config_entry.runtime_data.client.start_charge(
-                        device_id=self.device_id,
-                        connector_id=connector_id,
-                        resume_charging=self.get_connector_status_sync(
-                            connector_id=connector_id
-                        )
-                        == ChargeStateEnum.suspended_evse,
-                    )
-                    return
-
-                if state == ChargeStateEnum.charging:
-                    LOGGER.info("Charge has started; setting MAX current")
-                    await self.set_config(
-                        name="configs.CurrentAssignment",
-                        value=str(self.get_max_current()),
-                    )
-                    return
-
-                if (
-                    state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
-                    and toggle is not None
-                    and "toggle" not in tried_quirks
-                ):
-                    LOGGER.warning("Toggling switch: %s", toggle)
-                    tried_quirks.append("toggle")
-                    await self.start_delayed_operation(
-                        delay,
-                        handle_car_quirks,
-                        tries=tries - 1,
-                        tried_quirks=tried_quirks,
-                    )
-
-                    registry = er.async_get(self.hass)
-                    switch: SwitchEntity = registry.async_get(toggle)
-                    switch.toggle()
-                    return
-
-                if (
-                    state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
-                    and service_action is not None
-                    and service_action != []
-                    and "service_action" not in tried_quirks
-                ):
-                    LOGGER.warning("Calling service: %s", service_action)
-                    tried_quirks.append("service_action")
-                    service_call = {
-                        "service": service_action[0].get("action"),
-                        "data": service_action[0].get("data", {}),
-                    }
-
-                    await self.start_delayed_operation(
-                        delay,
-                        handle_car_quirks,
-                        tries=tries - 1,
-                        tried_quirks=tried_quirks,
-                    )
-                    await async_call_from_config(self.hass, service_call)
-                    return
-
-                if (
-                    state in (ChargeStateEnum.suspended_ev, ChargeStateEnum.preparing)
-                    and reboot
-                    and "reboot" not in tried_quirks
-                ):
-                    tried_quirks.append("reboot")
-                    LOGGER.warning(
-                        "Seems like charge did not start as expected; rebooting"
-                    )
-                    await self.send_command(command="REBOOT")
-                    await self.start_delayed_operation(
-                        delay=2 * delay,
-                        func=handle_car_quirks,
-                        tries=tries - 1,
-                        tried_quirks=tried_quirks,
-                    )
-                    return
-
-                LOGGER.warning("Charge not started; checking again in %ds", delay)
-                await self.start_delayed_operation(
-                    delay, handle_car_quirks, tries=tries - 1, tried_quirks=tried_quirks
-                )
-                return
-
-            LOGGER.error("Start charge apparently failed")
-
         if self.config_entry.options["enable_quirks"]:
-            await self.start_delayed_operation(delay=delay, func=handle_car_quirks)
+            LOGGER.info("Quirks enabled")
+            await self.start_delayed_operation(
+                delay=60, func=self.handle_car_quirks, connector_id=connector_id
+            )
 
     async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
