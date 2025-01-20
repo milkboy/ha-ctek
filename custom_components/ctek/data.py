@@ -90,13 +90,18 @@ class ThirdPartyOcppStatusType(TypedDict):
     external_ocpp: bool
 
 
-class DeviceStatusType(TypedDict):
+class DeviceStatusTypeOpt(TypedDict, total=False):
+    """Connector data type."""
+
+    load_balancing_onboarded: bool
+    third_party_ocpp_status: ThirdPartyOcppStatusType
+
+
+class DeviceStatusType(DeviceStatusTypeOpt):
     """Connector data type."""
 
     connected: bool
     connectors: dict[str, ConnectorType]
-    load_balancing_onboarded: bool
-    third_party_ocpp_status: ThirdPartyOcppStatusType
 
 
 class DataType(TypedDict):

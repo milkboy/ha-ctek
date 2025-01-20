@@ -7,7 +7,7 @@ from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import _LOGGER
 from .data import ChargingSessionType, ConnectorType, DataType
-from .enums import ChargeStateEnum
+from .enums import ChargeStateEnum, StatusReasonEnum
 
 LOGGER = _LOGGER.getChild("parser")
 
@@ -28,7 +28,7 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
                 else parse(c.get("startDate"))
                 .astimezone(DEFAULT_TIME_ZONE)
                 .replace(second=0, microsecond=0),
-                "status_reason": c.get("statusReason"),
+                "status_reason": StatusReasonEnum.find(c.get("statusReason")),
                 "update_date": None
                 if c.get("updateDate") in (None, "")
                 else parse(c.get("updateDate")).astimezone(DEFAULT_TIME_ZONE),
@@ -42,7 +42,9 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
                 else parse(c.get("start_date", c.get("startDate")))
                 .astimezone(DEFAULT_TIME_ZONE)
                 .replace(second=0, microsecond=0),
-                "status_reason": c.get("status_reason", c.get("statusReason")),
+                "status_reason": StatusReasonEnum.find(
+                    c.get("status_reason", c.get("statusReason"))
+                ),
                 "update_date": None
                 if c.get("update_date", c.get("updateDate")) in (None, "")
                 else parse(c.get("update_date", c.get("updateDate")))
@@ -162,15 +164,21 @@ def parse_ws_message(data: dict, device_id: str, old_data: DataType) -> DataType
             "type": data.get("type"),
             "watt_hours_consumed": data.get("watt_hours_consumed"),
         }
-        if old_data["charging_session"] is None:
+        prev = old_data.get("charging_session")
+        if prev is None:
             old_data["charging_session"] = session_data
         else:
-            old_data["charging_session"].update(session_data)
+            prev.update(session_data)
 
     elif data.get("type") == "connectorStatus":
         LOGGER.debug("Status update: %s", data)
-        c = copy.deepcopy(old_data["device_status"]["connectors"][str(data.get("id"))])
-        c.update(parse_connectors([data])[str(data.get("id"))])
+        c = copy.deepcopy(
+            old_data["device_status"].get("connectors", {}).get(str(data.get("id")))
+        )
+        if c is None:
+            c = parse_connectors([data])[str(data.get("id"))]
+        else:
+            c.update(parse_connectors([data])[str(data.get("id"))])
         old_data["device_status"]["connectors"][str(data.get("id"))] = c
     else:
         LOGGER.error("Not implemented: %s", data)
