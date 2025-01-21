@@ -30,7 +30,7 @@ def light_intensity_icon(status: float | None) -> str:
     """Set icon based on led intensity."""
     perc_50 = 50
     perc_80 = 80
-    if status is None:
+    if status == 0 or status is None:
         return "mdi:lightbulb-off"
     if status >= perc_80:
         return "mdi:lightbulb-on"
@@ -121,7 +121,6 @@ class CtekNumberSetting(CtekEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         try:
-            # Your code to actually set the value on the device
             await self.coordinator.set_config(
                 name=self.entity_description.key, value=str(int(value))
             )
