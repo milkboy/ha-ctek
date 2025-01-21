@@ -28,26 +28,21 @@ jobs:
 
       # Restore cached virtual environment
       - name: Restore virtual environment
+        id: python-cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.local
             ~/.cache
+            ${{ env.pythonLocation }}
           key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
 
       - name: Install dependencies
+        if: steps.python-cache.outputs.cache-hit != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
-
-      - name: Cache virtual environment
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local
-            ~/.cache
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
 
   lint:
     needs: setup
