@@ -26,13 +26,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache pip packages
+      # Restore cached virtual environment
+      - name: Restore virtual environment
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          path: |
+            ~/.local
+            ~/.cache
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
 
       - name: Install dependencies
         run: |
