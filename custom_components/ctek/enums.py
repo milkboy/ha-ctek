@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from .const import _LOGGER as LOGGER
+from .const import BASE_LOGGER as LOGGER
 
 
 class ChargeStateEnum(Enum):
@@ -21,7 +21,7 @@ class ChargeStateEnum(Enum):
     unknown = "Unknown"
 
     @staticmethod
-    def find(val: str) -> "ChargeStateEnum":
+    def find(val: str | None) -> "ChargeStateEnum":
         """Find and return the corresponding ChargeStateEnum member for the given value.
 
         Args:
@@ -55,7 +55,7 @@ class StatusReasonEnum(Enum):
     unknown = "Unknown"
 
     @staticmethod
-    def find(val: str) -> "StatusReasonEnum":
+    def find(val: str | None) -> "StatusReasonEnum":
         """Return the corresponding StatusReasonEnum member for the given value.
 
         Args:

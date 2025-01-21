@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, TypeGuard
 
 from homeassistant.config_entries import ConfigEntry
 
@@ -154,6 +154,47 @@ class InstructionResponseType(TypedDict):
 
     device_id: str
     instruction: InstructionType
-    information: dict
-    ocpp: dict
+    information: dict[Any, Any]
+    ocpp: dict[Any, Any]
     accepted: bool | None
+
+
+class ChargingSessionSummaryWSType(TypedDict):
+    """WS message for charging session data."""
+
+    device_id: str
+    ongoing_transaction: bool
+    transaction_id: int
+    watt_hours_consumed: int
+    momentary_voltage: str
+    momentary_power: str
+    momentary_current: str
+    start_time: str
+    last_updated_time: str
+    device_online: bool
+    type: str
+
+
+class ConnectorStatusWSType(TypedDict):
+    """WS message for connector status updates."""
+
+    updateDate: str
+    statusReason: str
+    id: int
+    type: str
+    deviceId: str
+    startDate: str
+    stateLocalizeKey: str
+    status: str
+
+
+def is_ws_charging_session_type(val: dict) -> TypeGuard[ChargingSessionSummaryWSType]:
+    """Check if the message type is chargingSessionSummary."""
+    return val.get("type") == "chargingSessionSummary"
+
+
+def is_ws_connector_status_type(
+    val: dict | ConnectorStatusWSType,
+) -> TypeGuard[ConnectorStatusWSType]:
+    """Check if the message type is connectorStatus."""
+    return val.get("type") == "connectorStatus"

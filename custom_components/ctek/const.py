@@ -2,7 +2,7 @@
 
 from logging import Logger, getLogger
 
-_LOGGER: Logger = getLogger(__package__)
+BASE_LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "ctek"
 

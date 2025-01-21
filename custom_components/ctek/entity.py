@@ -8,7 +8,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import _LOGGER, DOMAIN
+from .const import BASE_LOGGER, DOMAIN
 from .coordinator import CtekDataUpdateCoordinator
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from homeassistant.helpers.entity import EntityDescription
 
-LOGGER = _LOGGER.getChild("entity")
+LOGGER = BASE_LOGGER.getChild("entity")
 
 
 def callback(func: Callable[..., Any]) -> Callable[..., Any]:

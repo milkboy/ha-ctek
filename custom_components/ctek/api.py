@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import (
-    _LOGGER,
+    BASE_LOGGER,
     CONTROL_URL,
     DEVICE_LIST_URL,
     DOMAIN,
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 DEBUG = False
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
-LOGGER = _LOGGER.getChild("api")
+LOGGER = BASE_LOGGER.getChild("api")
 
 
 def _needs_refresh(response: aiohttp.ClientResponse) -> bool:

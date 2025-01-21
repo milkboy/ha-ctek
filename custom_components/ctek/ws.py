@@ -11,10 +11,10 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import _LOGGER, WS_USER_AGENT
+from .const import BASE_LOGGER, WS_USER_AGENT
 
 MAX_ERRORS = 10
-LOGGER = _LOGGER.getChild("ws")
+LOGGER = BASE_LOGGER.getChild("ws")
 
 
 class WebSocketClient:
