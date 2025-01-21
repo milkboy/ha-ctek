@@ -93,6 +93,8 @@ async def async_setup_entry(
 class CtekNumberSetting(CtekEntity, NumberEntity):
     """Number entity to control maximum current."""
 
+    entity_description: CtekNumberEntityDescription
+
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,

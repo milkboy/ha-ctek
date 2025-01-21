@@ -3,7 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from ctek.binary_sensor import CtekBinarySensor
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -12,6 +11,7 @@ from homeassistant.components.binary_sensor import (
 
 from custom_components.ctek import CtekData
 from custom_components.ctek.binary_sensor import (
+    CtekBinarySensor,
     async_setup_entry,
 )
 

@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock
 
 import aiohttp
@@ -24,7 +25,8 @@ def api_client(hass: HomeAssistant):
 
 
 @pytest.mark.asyncio
-async def test_login(api_client):
+async def test_login(api_client, caplog):
+    caplog.set_level(logging.WARNING, logger="custom_components")
     # Mock the response of the POST request
     with aioresponses() as m:
         m.post(

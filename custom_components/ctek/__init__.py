@@ -148,7 +148,7 @@ async def async_unload_entry(
     entry: CtekConfigEntry,
 ) -> bool:
     """Handle removal of an entry."""
-    LOGGER.info(f"Unloading {DOMAIN} integration")
+    LOGGER.debug(f"Unloading {DOMAIN} integration")
 
     client: WebSocketClient | None = (
         hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("websocket_client")

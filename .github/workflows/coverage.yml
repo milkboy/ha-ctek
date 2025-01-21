@@ -36,3 +36,4 @@ jobs:
           # COMMENT_FILENAME: python-coverage-comment-action.txt
           MINIMUM_GREEN: 90
           MINIMUM_ORANGE: 80
+          ANNOTATE_MISSING_LINES: "true"
