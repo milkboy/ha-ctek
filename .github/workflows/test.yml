@@ -15,7 +15,6 @@ jobs:
     permissions:
       pull-requests: read
       contents: read
-    continue-on-error: true
 
     steps:
       - name: Checkout
@@ -41,7 +40,6 @@ jobs:
   lint:
     needs: setup
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -69,7 +67,6 @@ jobs:
       # Required for PR comments
       pull-requests: write
       contents: write
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
