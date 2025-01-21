@@ -84,6 +84,8 @@ async def async_setup_entry(
 class CtekBinarySensor(CtekEntity, BinarySensorEntity):
     """ctek binary_sensor class."""
 
+    entity_description: BinarySensorEntityDescription
+
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,
@@ -96,6 +98,8 @@ class CtekBinarySensor(CtekEntity, BinarySensorEntity):
             entity_description=entity_description,
             device_id=device_id,
         )
+        if self.entity_description is None:
+            return
         val = self.coordinator.get_property(self.entity_description.key)
         self._attr_is_on = val in (True, "true")
         self._attr_extra_state_attributes: dict[str, Any] = {}
@@ -103,6 +107,8 @@ class CtekBinarySensor(CtekEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if self.entity_description is None:
+            return
         val = self.coordinator.get_property(self.entity_description.key)
         self._attr_is_on = val in (True, "true")
         self.schedule_update_ha_state()

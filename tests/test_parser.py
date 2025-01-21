@@ -15,9 +15,10 @@ from custom_components.ctek.parser import parse_connectors, parse_data, parse_ws
 def faulted_connector():
     return {
         "id": "1",
-        "status": "Faulted",
-        "startDate": "2025-01-20T12:00:00Z",
-        "updateDate": "2025-01-20T12:05:00Z",
+        "current_status": "Faulted",
+        "status_reason": "GroundFailure",
+        "start_date": "2025-01-20T12:00:00Z",
+        "update_date": "2025-01-20T12:05:00Z",
     }
 
 
