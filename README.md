@@ -1,10 +1,19 @@
 # CTEK EV charger integration
 
+![GitHub License](https://img.shields.io/github/license/milkboy/ha-ctek)
+![Coverage badge](https://raw.githubusercontent.com/milkboy/ha-ctek/python-coverage-comment-action-data/badge.svg)
+![hacs_badge](https://img.shields.io/badge/HACS-Custom_Integration-orange.svg)
+
+![GitHub Release](https://img.shields.io/github/v/release/milkboy/ha-ctek)
+![GitHub Release Date](https://img.shields.io/github/release-date/milkboy/ha-ctek)
+![GitHub branch check runs](https://img.shields.io/github/check-runs/milkboy/ha-ctek/main)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/milkboy/ha-ctek)
+
 Totally not a quick hack that may or may not work.
 
 ### Prerequisites
 
-- Oauth client credentials
+- OAuth client credentials
 - CTEK account
 - ???
 
@@ -13,7 +22,7 @@ Totally not a quick hack that may or may not work.
 
 ### Installation
 
-As most custom components
+As most custom components (recommended to add as [custom repository in HACS](https://www.hacs.xyz/docs/faq/custom_repositories/))
 
 ### Known issues
 
