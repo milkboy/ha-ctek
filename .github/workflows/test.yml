@@ -27,15 +27,9 @@ jobs:
           python-version: "3.12"
 
       # Restore cached virtual environment
+      # Restore cached virtual environment
       - name: Restore virtual environment
-        id: python-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local
-            ~/.cache
-            ${{ env.pythonLocation }}
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
+        uses: ./.github/actions/cache
 
       - name: Install dependencies
         if: steps.python-cache.outputs.cache-hit != 'true'
@@ -58,14 +52,9 @@ jobs:
           python-version: "3.12"
 
       # Restore cached virtual environment
+      # Restore cached virtual environment
       - name: Restore virtual environment
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local
-            ~/.cache
-            ${{ env.pythonLocation }}
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
+        uses: ./.github/actions/cache
 
       - name: Lint
         run: python3 -m ruff check .
@@ -92,13 +81,7 @@ jobs:
 
       # Restore cached virtual environment
       - name: Restore virtual environment
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local
-            ~/.cache
-            ${{ env.pythonLocation }}
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
+        uses: ./.github/actions/cache
 
       - name: Run tests with coverage
         run: |

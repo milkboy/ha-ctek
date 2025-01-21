@@ -1,0 +1,13 @@
+name: "Shared cache"
+runs:
+  using: "composite"
+  steps:
+    # Restore cached virtual environment
+    - name: Restore virtual environment
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local
+          ~/.cache
+          ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
