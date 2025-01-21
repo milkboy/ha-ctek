@@ -12,12 +12,12 @@ class ChargeStateEnum(Enum):
     charging = "Charging"
     faulted = "Faulted"  # Never seen this (yet)
     finishing = "Finishing"
+    offline = "Offline"
     preparing = "Preparing"
     reserved = "Reserved"  # Probably unused
     suspended_ev = "SuspendedEV"
     suspended_evse = "SuspendedEVSE"
     unavailable = "Unavailable"  # May not be used
-    offline = "Offline"
     unknown = "Unknown"
 
     @staticmethod
@@ -51,8 +51,14 @@ class ChargeStateEnum(Enum):
 class StatusReasonEnum(Enum):
     """Status reason enum."""
 
+    ground_failure = "GroundFailure"
+    high_temperature = "HighTemperature"
+    internal_error = "InternalError"
     no_error = "NoError"
+    other_error = "OtherError"
+    power_meter_failure = "PowerMeterFailure"
     unknown = "Unknown"
+    weak_signal = "WeakSignal"
 
     @staticmethod
     def find(val: str | None) -> "StatusReasonEnum":
