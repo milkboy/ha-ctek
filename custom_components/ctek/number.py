@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import _LOGGER
+from .const import BASE_LOGGER
 from .coordinator import CtekDataUpdateCoordinator
 from .data import CtekConfigEntry
 from .entity import CtekEntity, callback
@@ -23,7 +23,7 @@ class CtekNumberEntityDescription(NumberEntityDescription):
 
 
 DEVICE_STATUS_ENTITY_DESCRIPTIONS: tuple[CtekNumberEntityDescription, ...] = ()
-LOGGER = _LOGGER.getChild("entity")
+LOGGER = BASE_LOGGER.getChild("entity")
 
 
 def light_intensity_icon(status: float | None) -> str:

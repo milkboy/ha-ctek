@@ -10,7 +10,7 @@ from homeassistant.components.switch import (
     SwitchEntityDescription,
 )
 
-from .const import _LOGGER
+from .const import BASE_LOGGER
 from .entity import CtekEntity, callback
 from .enums import ChargeStateEnum
 
@@ -30,7 +30,7 @@ ENTITY_DESCRIPTIONS = (
     ),
 )
 
-LOGGER = _LOGGER.getChild("entity")
+LOGGER = BASE_LOGGER.getChild("entity")
 
 
 async def async_setup_entry(

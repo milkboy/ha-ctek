@@ -1,18 +1,29 @@
 """Data parsers."""
 
 import copy
+from typing import Any
 
 from dateutil.parser import parse
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
-from .const import _LOGGER
-from .data import ChargingSessionType, ConnectorType, DataType
+from .const import BASE_LOGGER
+from .data import (
+    ChargingSessionType,
+    ConnectorStatusWSType,
+    ConnectorType,
+    DataType,
+    InstructionResponseType,
+    is_ws_charging_session_type,
+    is_ws_connector_status_type,
+)
 from .enums import ChargeStateEnum, StatusReasonEnum
 
-LOGGER = _LOGGER.getChild("parser")
+LOGGER = BASE_LOGGER.getChild("parser")
 
 
-def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
+def parse_connectors(
+    connectors: list[dict[str, Any] | ConnectorStatusWSType],
+) -> dict[str, ConnectorType]:
     """Parse connector related data."""
     ret: dict[str, ConnectorType] = {}
     for c in connectors:
@@ -20,7 +31,7 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
         new: ConnectorType
         if ret.get(str(c["id"]), None) is not None:
             old = copy.deepcopy(ret[str(c["id"])])
-        if c.get("statusReason") is not None:
+        if is_ws_connector_status_type(c):
             new = {
                 "current_status": ChargeStateEnum.find(c.get("status")),
                 "start_date": None
@@ -35,26 +46,31 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
                 "state_localize_key": c.get("stateLocalizeKey", ""),
             }
         else:
+            # TMP debug
+            if c.get("statusReason") is not None:
+                LOGGER.error("WS type response but expected snake cased values")
             new = {
-                "current_status": ChargeStateEnum.find(c.get("current_status")),
+                "current_status": ChargeStateEnum.find(
+                    str(c.get("current_status", ""))
+                ),
                 "start_date": None
                 if c.get("start_date", c.get("startDate")) in (None, "")
                 else parse(c.get("start_date", c.get("startDate")))
                 .astimezone(DEFAULT_TIME_ZONE)
                 .replace(second=0, microsecond=0),
-                "status_reason": StatusReasonEnum.find(
-                    c.get("status_reason", c.get("statusReason"))
-                ),
+                "status_reason": StatusReasonEnum.find(str(c.get("status_reason"))),
                 "update_date": None
                 if c.get("update_date", c.get("updateDate")) in (None, "")
                 else parse(c.get("update_date", c.get("updateDate")))
                 .astimezone(DEFAULT_TIME_ZONE)
                 .replace(second=0, microsecond=0),
-                "relative_time": c.get("relative_time", ""),
-                "has_schedule": c.get("has_schedule", False),
-                "has_active_schedule": c.get("has_active_schedule", False),
-                "has_overridden_schedule": c.get("has_overridden_schedule", False),
-                "state_localize_key": c.get("state_localize_key", ""),
+                "relative_time": str(c.get("relative_time", "")),
+                "has_schedule": bool(c.get("has_schedule", False)),
+                "has_active_schedule": bool(c.get("has_active_schedule", False)),
+                "has_overridden_schedule": bool(
+                    c.get("has_overridden_schedule", False)
+                ),
+                "state_localize_key": str(c.get("state_localize_key", "")),
             }
 
         if old is not None:
@@ -63,7 +79,9 @@ def parse_connectors(connectors: list) -> dict[str, ConnectorType]:
     return ret
 
 
-def parse_data(original_data: DataType, device_id: str, data: list) -> DataType:
+def parse_data(
+    original_data: DataType, device_id: str, data: list[dict[str, Any]]
+) -> DataType:
     """Parse data."""
     ret: DataType = {
         "device_id": "",
@@ -94,48 +112,52 @@ def parse_data(original_data: DataType, device_id: str, data: list) -> DataType:
     if original_data is not None:
         ret.update(original_data)
     for d in data:
-        if d["device_id"] == device_id:
-            ret["device_id"] = d.get("device_id")
+        if d.get("device_id") == device_id:
+            ret["device_id"] = d.get("device_id", "")
             ret["device_alias"] = d.get("device_alias")
-            ret["device_type"] = d.get("device_type")
-            ret["hardware_id"] = d.get("hardware_id")
-            ret["firmware_id"] = d.get("firmware_id")
-            ret["model"] = d.get("model")
-            ret["standardized_model"] = d.get("standardized_model")
-            ret["number_of_connectors"] = d.get("number_of_connectors")
-            ret["firmware_version"] = d.get("firmware_version")
+            ret["device_type"] = d.get("device_type", "")
+            ret["hardware_id"] = d.get("hardware_id", "")
+            ret["firmware_id"] = d.get("firmware_id", "")
+            ret["model"] = d.get("model", "")
+            ret["standardized_model"] = d.get("standardized_model", "")
+            ret["number_of_connectors"] = d.get("number_of_connectors", 0)
+            ret["firmware_version"] = d.get("firmware_version", "")
             ret["device_status"] = {
-                "connected": d.get("device_status").get("connected"),
+                "connected": d.get("device_status", {}).get("connected"),
                 "connectors": parse_connectors(
-                    d.get("device_status").get("connectors")
+                    d.get("device_status", {}).get("connectors")
                 ),
-                "load_balancing_onboarded": d.get("device_status").get(
+                "load_balancing_onboarded": d.get("device_status", {}).get(
                     "load_balancing_onboarded"
                 ),
                 "third_party_ocpp_status": {
                     "external_ocpp": (
-                        d.get("device_status")
+                        d.get("device_status", {})
                         .get("third_party_ocpp_status")
                         .get("external_ocpp")
                     )
                 },
             }
             ret["firmware_update"] = {
-                "update_available": d.get("firmware_update").get("update_available")
+                "update_available": d.get("firmware_update", {}).get("update_available")
             }
-            ret["has_schedules"] = d.get("has_schedules")
+            ret["has_schedules"] = d.get("has_schedules", False)
             ret["device_info"] = {
-                "mac_address": d.get("device_info").get("mac_address"),
-                "passkey": d.get("device_info").get("passkey"),
+                "mac_address": d.get("device_info", {}).get("mac_address"),
+                "passkey": d.get("device_info", {}).get("passkey"),
             }
-            ret["owner"] = d.get("owner")
+            ret["owner"] = d.get("owner", False)
             break
     return ret
 
 
-def parse_ws_message(data: dict, device_id: str, old_data: DataType) -> DataType:
+def parse_ws_message(
+    data: dict[str, Any],
+    device_id: str,
+    old_data: DataType,
+) -> DataType:
     """Parse a message from web socket connection."""
-    if data.get("type") == "chargingSessionSummary":
+    if is_ws_charging_session_type(data):
         LOGGER.debug("Charging session summary: %s", data)
         if device_id != data.get("device_id"):
             LOGGER.warning("Data for wrong device received")
@@ -143,7 +165,7 @@ def parse_ws_message(data: dict, device_id: str, old_data: DataType) -> DataType
         updated = (
             None
             if data.get("last_update_time") in ("", None)
-            else parse(data.get("last_update_time"))
+            else parse(data.get("last_update_time", ""))
         )
         start = (
             None
@@ -170,17 +192,56 @@ def parse_ws_message(data: dict, device_id: str, old_data: DataType) -> DataType
         else:
             prev.update(session_data)
 
-    elif data.get("type") == "connectorStatus":
+    elif is_ws_connector_status_type(data):
         LOGGER.debug("Status update: %s", data)
         c = copy.deepcopy(
             old_data["device_status"].get("connectors", {}).get(str(data.get("id")))
         )
+        new = parse_connectors([data])[str(data.get("id"))]
         if c is None:
-            c = parse_connectors([data])[str(data.get("id"))]
+            c = new
         else:
-            c.update(parse_connectors([data])[str(data.get("id"))])
+            c.update(new)
         old_data["device_status"]["connectors"][str(data.get("id"))] = c
     else:
         LOGGER.error("Not implemented: %s", data)
 
     return old_data
+
+
+def parse_instruction_response(res: dict[str, Any]) -> InstructionResponseType:
+    """Parse the instruction response from a given dictionary.
+
+    Args:
+        res (dict): The response dictionary containing instruction data.
+
+    Returns:
+        InstructionResponseType: A dictionary containing parsed instruction
+          response data.
+
+    """
+    data: InstructionResponseType = {
+        "device_id": res.get("device_id", ""),
+        "information": res.get("information", {}),
+        "instruction": {
+            "connector_id": res.get("instruction", {}).get("connector_id"),
+            "device_id": res.get("instruction", {}).get("device_id"),
+            "info": {
+                "firmware": res.get("instruction", {}).get("info", {}).get("firmware"),
+                "id": res.get("instruction", {}).get("info", {}).get("id"),
+                "key": res.get("instruction", {}).get("info", {}).get("key"),
+                "units": res.get("instruction", {}).get("info", {}).get("units"),
+                "value": res.get("instruction", {}).get("info", {}).get("value"),
+            },
+            "id": res.get("instruction", {}).get("id"),
+            "instruction": res.get("instruction", {}).get("instruction"),
+            "timeout": res.get("instruction", {}).get("timeout"),
+            "transaction_id": res.get("instruction", {}).get("transaction_id"),
+            "user_id": res.get("instruction", {}).get("user_id"),
+            "user_id_is_owner": res.get("instruction", {}).get("user_id_is_owner"),
+        },
+        "ocpp": {},
+        "accepted": res.get("accepted"),
+    }
+
+    return data
