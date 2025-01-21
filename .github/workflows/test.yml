@@ -31,7 +31,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/test_requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -40,7 +40,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
-          pip install -r test_requirements.txt
+
+      - name: Lint
+        run: python3 -m ruff check .
+
+      - name: Format
+        run: python3 -m ruff format . --check
 
       - name: Run tests with coverage
         run: |
