@@ -64,6 +64,7 @@ jobs:
           path: |
             ~/.local
             ~/.cache
+            ${{ env.pythonLocation }}
           key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
 
       - name: Lint
@@ -96,6 +97,7 @@ jobs:
           path: |
             ~/.local
             ~/.cache
+            ${{ env.pythonLocation }}
           key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt') }}
 
       - name: Run tests with coverage
