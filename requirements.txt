@@ -6,4 +6,4 @@ pylint==3.3.4
 pytest-homeassistant-custom-component==0.13.205
 pytest==8.3.4
 ruff==0.9.5
-websockets==14.2
+websockets==15.0.1
