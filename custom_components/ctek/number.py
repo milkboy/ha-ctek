@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import _LOGGER
+from .const import BASE_LOGGER
 from .coordinator import CtekDataUpdateCoordinator
 from .data import CtekConfigEntry
 from .entity import CtekEntity, callback
@@ -23,14 +23,14 @@ class CtekNumberEntityDescription(NumberEntityDescription):
 
 
 DEVICE_STATUS_ENTITY_DESCRIPTIONS: tuple[CtekNumberEntityDescription, ...] = ()
-LOGGER = _LOGGER.getChild("entity")
+LOGGER = BASE_LOGGER.getChild("entity")
 
 
 def light_intensity_icon(status: float | None) -> str:
     """Set icon based on led intensity."""
     perc_50 = 50
     perc_80 = 80
-    if status is None:
+    if status == 0 or status is None:
         return "mdi:lightbulb-off"
     if status >= perc_80:
         return "mdi:lightbulb-on"
@@ -93,6 +93,8 @@ async def async_setup_entry(
 class CtekNumberSetting(CtekEntity, NumberEntity):
     """Number entity to control maximum current."""
 
+    entity_description: CtekNumberEntityDescription
+
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,
@@ -121,7 +123,6 @@ class CtekNumberSetting(CtekEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         try:
-            # Your code to actually set the value on the device
             await self.coordinator.set_config(
                 name=self.entity_description.key, value=str(int(value))
             )

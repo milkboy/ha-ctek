@@ -84,6 +84,8 @@ async def async_setup_entry(
 class CtekBinarySensor(CtekEntity, BinarySensorEntity):
     """ctek binary_sensor class."""
 
+    entity_description: BinarySensorEntityDescription
+
     def __init__(
         self,
         coordinator: CtekDataUpdateCoordinator,

@@ -18,7 +18,7 @@ from .api import (
     CtekApiClientCommunicationError,
     CtekApiClientError,
 )
-from .const import _LOGGER as LOGGER
+from .const import BASE_LOGGER as LOGGER
 from .const import DOMAIN
 from .entity import callback
 

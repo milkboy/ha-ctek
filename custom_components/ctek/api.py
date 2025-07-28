@@ -1,4 +1,4 @@
-"""Sample API Client."""
+"""API Client."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .const import (
-    _LOGGER,
+    BASE_LOGGER,
     CONTROL_URL,
     DEVICE_LIST_URL,
     DOMAIN,
@@ -21,6 +21,7 @@ from .const import (
     CtekApiClientCommunicationError,
     CtekApiClientError,
 )
+from .parser import parse_instruction_response
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
 DEBUG = False
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
-LOGGER = _LOGGER.getChild("api")
+LOGGER = BASE_LOGGER.getChild("api")
 
 
 def _needs_refresh(response: aiohttp.ClientResponse) -> bool:
@@ -91,8 +92,12 @@ class CtekApiClient:
         self._user_agent = user_agent
         self._app_profile = app_profile
 
+    def _set_session(self, sess: aiohttp.ClientSession) -> None:
+        self._session = sess
+
     async def refresh_access_token(self) -> None:
         """Refresh the access token."""
+        res: None | dict = None
         if self._refresh_token is not None:
             LOGGER.debug("Trying to refresh access token using refresh token")
             try:
@@ -110,7 +115,7 @@ class CtekApiClient:
                 LOGGER.debug("Access token refreshed using refresh token")
             except CtekApiClientCommunicationError:
                 self._refresh_token = None
-
+                res = None
         if self._refresh_token is None:
             LOGGER.info("No refresh token available, doing login")
             res = await self._api_wrapper(
@@ -126,6 +131,11 @@ class CtekApiClient:
             )
 
             LOGGER.debug("Access token refreshed: %s", res["access_token"])
+
+        if res is None:
+            LOGGER.error("Failed to refresh access token")
+            return
+
         if self._access_token != res["access_token"]:
             self.hass.bus.fire(
                 event_type=f"{DOMAIN}_tokens_updated",
@@ -173,7 +183,7 @@ class CtekApiClient:
             raise HomeAssistantError(msg)
         LOGGER.debug(res)
         # _assert_success(res)
-        return self.parse_instruction_response(res["data"])
+        return parse_instruction_response(res["data"])
 
     async def stop_charge(
         self,
@@ -207,7 +217,7 @@ class CtekApiClient:
             raise HomeAssistantError(msg)
         LOGGER.debug(res)
         # _assert_success(res)
-        return self.parse_instruction_response(res["data"])
+        return parse_instruction_response(res["data"])
 
     async def send_command(
         self, *, device_id: str, command: str
@@ -239,7 +249,7 @@ class CtekApiClient:
                 _raise_home_assistant_error(msg)
             LOGGER.debug(res["data"])
             # _assert_success(res)
-            return self.parse_instruction_response(res["data"])
+            return parse_instruction_response(res["data"])
         except Exception:
             LOGGER.exception("Failed to send command")
             raise
@@ -354,42 +364,3 @@ class CtekApiClient:
     def get_refresh_token(self) -> str | None:
         """Get the access token."""
         return self._refresh_token
-
-    def parse_instruction_response(self, res: dict) -> InstructionResponseType:
-        """Parse the instruction response from a given dictionary.
-
-        Args:
-            res (dict): The response dictionary containing instruction data.
-
-        Returns:
-            InstructionResponseType: A dictionary containing parsed instruction
-              response data.
-
-        """
-        data: InstructionResponseType = {
-            "device_id": res.get("device_id", ""),
-            "information": res.get("information", {}),
-            "instruction": {
-                "connector_id": res.get("instruction", {}).get("connector_id"),
-                "device_id": res.get("instruction", {}).get("device_id"),
-                "info": {
-                    "firmware": res.get("instruction", {})
-                    .get("info", {})
-                    .get("firmware"),
-                    "id": res.get("instruction", {}).get("info", {}).get("id"),
-                    "key": res.get("instruction", {}).get("info", {}).get("key"),
-                    "units": res.get("instruction", {}).get("info", {}).get("units"),
-                    "value": res.get("instruction", {}).get("info", {}).get("value"),
-                },
-                "id": res.get("instruction", {}).get("id"),
-                "instruction": res.get("instruction", {}).get("instruction"),
-                "timeout": res.get("instruction", {}).get("timeout"),
-                "transaction_id": res.get("instruction", {}).get("transaction_id"),
-                "user_id": res.get("instruction", {}).get("user_id"),
-                "user_id_is_owner": res.get("instruction", {}).get("user_id_is_owner"),
-            },
-            "ocpp": {},
-            "accepted": res.get("accepted"),
-        }
-
-        return data

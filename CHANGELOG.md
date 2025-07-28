@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.9] - 2025-07-28
+
+### Changed
+
+- parser refactoring
+- better handling of relogin
+- python 3.13 for devcontainer
+
 ## [0.0.8] - 2025-01-20
 
 ### Added

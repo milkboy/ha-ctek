@@ -15,21 +15,23 @@ from custom_components.ctek.parser import parse_connectors, parse_data, parse_ws
 def faulted_connector():
     return {
         "id": "1",
-        "status": "Faulted",
-        "startDate": "2025-01-20T12:00:00Z",
-        "updateDate": "2025-01-20T12:05:00Z",
+        "current_status": "Faulted",
+        "status_reason": "GroundFailure",
+        "start_date": "2025-01-20T12:00:00Z",
+        "update_date": "2025-01-20T12:05:00Z",
     }
 
 
 @pytest.fixture
-def connector_with_reason():
+def connector_status_error():
     return {
         "id": "1",
         "status": "Unavailable",
-        "statusReason": "Maintenance",
+        "statusReason": "GroundFailure",
         "startDate": "2025-01-20T12:00:00Z",
         "updateDate": "2025-01-20T12:05:00Z",
         "stateLocalizeKey": "maintenance",
+        "type": "connectorStatus",
     }
 
 
@@ -101,11 +103,11 @@ def test_parse_connectors_basic(faulted_connector):
     assert result["1"]["state_localize_key"] == ""
 
 
-def test_parse_connectors_with_reason(connector_with_reason):
+def test_parse_connectors_with_reason(connector_status_error):
     """Test connector parsing with status reason."""
-    result = parse_connectors([connector_with_reason])
+    result = parse_connectors([connector_status_error])
 
-    assert result["1"]["status_reason"] == "Maintenance"
+    assert result["1"]["status_reason"] == StatusReasonEnum.ground_failure
     assert result["1"]["state_localize_key"] == "maintenance"
 
 

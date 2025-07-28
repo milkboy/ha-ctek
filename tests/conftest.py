@@ -11,7 +11,7 @@ disable_loggers = ["homeassistant.loader"]
 
 # This fixture enables loading of custom components
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: bool) -> None:  # noqa: ARG001, FBT001
+def auto_enable_custom_integrations(enable_custom_integrations: bool) -> None:  # noqa: FBT001
     """?."""
     return
 

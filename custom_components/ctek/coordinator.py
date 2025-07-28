@@ -20,7 +20,7 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from .api import CtekApiClientAuthenticationError, CtekApiClientError
-from .const import _LOGGER, DOMAIN, WS_URL
+from .const import BASE_LOGGER, DOMAIN, WS_URL
 from .enums import ChargeStateEnum
 from .parser import parse_data, parse_ws_message
 
@@ -40,7 +40,7 @@ from homeassistant.components.switch import SwitchEntity
 from .data import DataType, InstructionResponseType
 from .ws import WebSocketClient
 
-LOGGER = _LOGGER.getChild("coordinator")
+LOGGER = BASE_LOGGER.getChild("coordinator")
 
 
 def callback(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -460,8 +460,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 LOGGER.warning("Toggling switch: %s", toggle)
                 tried_quirks.append("toggle")
                 await self.start_delayed_operation(
-                    delay,
-                    self.handle_car_quirks,
+                    delay=delay,
+                    func=self.handle_car_quirks,
                     tries=tries - 1,
                     tried_quirks=tried_quirks,
                 )
@@ -488,8 +488,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 }
 
                 await self.start_delayed_operation(
-                    delay,
-                    self.handle_car_quirks,
+                    delay=delay,
+                    func=self.handle_car_quirks,
                     tries=tries - 1,
                     tried_quirks=tried_quirks,
                 )

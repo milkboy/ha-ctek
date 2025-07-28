@@ -1,5 +1,6 @@
 """Test the config flow."""
 
+import logging
 from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
@@ -39,7 +40,7 @@ def bypass_setup_fixture() -> Generator:
 class TestConfigFlow:
     """Test the config flow."""
 
-    async def test_user_step(self, hass: HomeAssistant) -> None:
+    async def test_user_step(self, hass: HomeAssistant, caplog) -> None:
         """Test that config entry is created."""
         mock_client = AsyncMock(CtekApiClient)
         mock_client.list_devices.return_value = {
@@ -55,6 +56,7 @@ class TestConfigFlow:
             DOMAIN,
             context=context,
         )
+
         if result.get("type") != data_entry_flow.FlowResultType.FORM:
             pytest.fail(f"Expected form, got {result.get('type')}")
         if result.get("errors") != {}:
@@ -85,13 +87,14 @@ class TestConfigFlow:
         if result2.get("errors") != {}:
             pytest.fail(f"Expected no errors, got {result.get('errors')}")
 
-        result3 = await hass.config_entries.flow.async_configure(
-            result2["flow_id"],
-            {
-                "device_id": "mockdev1",
-            },
-        )
-        await hass.async_block_till_done()
+        with caplog.at_level(logging.CRITICAL, logger="homeassistant"):
+            result3 = await hass.config_entries.flow.async_configure(
+                result2["flow_id"],
+                {
+                    "device_id": "mockdev1",
+                },
+            )
+            await hass.async_block_till_done()
 
         if result3.get("type") != data_entry_flow.FlowResultType.CREATE_ENTRY:
             pytest.fail(f"Expected create entry, got {result3.get('type')}")
@@ -110,10 +113,18 @@ class TestConfigFlow:
             pytest.fail(f"Expected '{expected}', got {result3.get('data')}")
 
     async def test_user_step_errors(self, hass: HomeAssistant) -> None:
+        mock_client = AsyncMock(CtekApiClient)
+        mock_client.list_devices.return_value = {
+            "data": [{"device_id": "mockdev1", "device_alias": "Mock Alias"}]
+        }
         """Test we get the form."""
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
+        context: CtekConfigFlowContext = CtekConfigFlowContext(
+            source=config_entries.SOURCE_USER,
+            client=mock_client,
+        )  # type: ignore[no-overload, unused-ignore]
+
+        """Test we get the form."""
+        result = await hass.config_entries.flow.async_init(DOMAIN, context=context)
         if result.get("type") != data_entry_flow.FlowResultType.FORM:
             pytest.fail(f"Expected form, got {result.get('type')}")
         if result.get("errors") != {}:

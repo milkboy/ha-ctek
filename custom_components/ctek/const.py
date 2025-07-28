@@ -2,7 +2,7 @@
 
 from logging import Logger, getLogger
 
-_LOGGER: Logger = getLogger(__package__)
+BASE_LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "ctek"
 
@@ -16,7 +16,7 @@ CONTROL_URL = "https://iot.ctek.com/api/v3/device/control"
 WS_USER_AGENT = "okhttp/4.12.0"
 WS_URL = "wss://iot.ctek.com/api/v1/socket/devices/transaction/"
 
-VERSION = "0.0.8"
+VERSION = "0.0.9"
 
 
 class CtekApiClientError(Exception):
