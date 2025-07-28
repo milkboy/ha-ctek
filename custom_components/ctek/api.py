@@ -97,6 +97,7 @@ class CtekApiClient:
 
     async def refresh_access_token(self) -> None:
         """Refresh the access token."""
+        res: None | dict = None
         if self._refresh_token is not None:
             LOGGER.debug("Trying to refresh access token using refresh token")
             try:
@@ -114,7 +115,7 @@ class CtekApiClient:
                 LOGGER.debug("Access token refreshed using refresh token")
             except CtekApiClientCommunicationError:
                 self._refresh_token = None
-
+                res = None
         if self._refresh_token is None:
             LOGGER.info("No refresh token available, doing login")
             res = await self._api_wrapper(
@@ -130,6 +131,11 @@ class CtekApiClient:
             )
 
             LOGGER.debug("Access token refreshed: %s", res["access_token"])
+
+        if res is None:
+            LOGGER.error("Failed to refresh access token")
+            return
+
         if self._access_token != res["access_token"]:
             self.hass.bus.fire(
                 event_type=f"{DOMAIN}_tokens_updated",
