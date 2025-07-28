@@ -460,8 +460,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 LOGGER.warning("Toggling switch: %s", toggle)
                 tried_quirks.append("toggle")
                 await self.start_delayed_operation(
-                    delay,
-                    self.handle_car_quirks,
+                    delay=delay,
+                    func=self.handle_car_quirks,
                     tries=tries - 1,
                     tried_quirks=tried_quirks,
                 )
@@ -488,8 +488,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 }
 
                 await self.start_delayed_operation(
-                    delay,
-                    self.handle_car_quirks,
+                    delay=delay,
+                    func=self.handle_car_quirks,
                     tries=tries - 1,
                     tried_quirks=tried_quirks,
                 )
