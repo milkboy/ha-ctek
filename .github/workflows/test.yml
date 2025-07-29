@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5.6.0
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       # Restore cached virtual environment
       # Restore cached virtual environment
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5.6.0
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       # Restore cached virtual environment
       # Restore cached virtual environment
@@ -74,7 +74,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5.6.0
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       # Restore cached virtual environment
       - name: Restore virtual environment
