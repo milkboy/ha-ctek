@@ -1,9 +1,9 @@
 aioresponses==0.7.8
 colorlog==6.9.0
 pip>=21.3.1
-pre-commit==4.2.0
-pylint==3.3.7
-pytest-homeassistant-custom-component==0.13.205
+pre-commit==4.3.0
+pylint==3.3.8
+pytest-homeassistant-custom-component==0.13.280
 pytest>=8.3
-ruff==0.12.5
+ruff==0.13.0
 websockets==15.0.1
