@@ -1,11 +1,11 @@
 force_refresh:
   target:
-    device:
+    entity:
       integration: ctek
   fields: {}
 send_command:
   target:
-    device:
+    entity:
       integration: ctek
   fields:
     command:
