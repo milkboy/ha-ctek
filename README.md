@@ -5,7 +5,7 @@
 | Name                                      |    Stmts |     Miss |   Cover |   Missing |
 |------------------------------------------ | -------: | -------: | ------: | --------: |
 | custom\_components/ctek/\_\_init\_\_.py   |       86 |       58 |     33% |44-143, 158, 168-169, 179-217 |
-| custom\_components/ctek/api.py            |      148 |       71 |     52% |43-48, 54-55, 63, 116-118, 136-137, 159-186, 196-220, 226-255, 259-268, 284, 288-289, 312-314, 323-325, 334-346, 353-354 |
+| custom\_components/ctek/api.py            |      153 |       52 |     66% |43-48, 63, 137-138, 160-187, 197-221, 247-250, 260-269, 285, 289-290, 314, 341-353, 360-361 |
 | custom\_components/ctek/binary\_sensor.py |       19 |        0 |    100% |           |
 | custom\_components/ctek/config\_flow.py   |       86 |       27 |     69% |83-91, 192-203, 211, 221-273, 279-320 |
 | custom\_components/ctek/const.py          |       14 |        0 |    100% |           |
@@ -14,11 +14,11 @@
 | custom\_components/ctek/entity.py         |       36 |        0 |    100% |           |
 | custom\_components/ctek/enums.py          |       43 |        8 |     81% |42-44, 48, 78-80, 84 |
 | custom\_components/ctek/number.py         |       48 |        0 |    100% |           |
-| custom\_components/ctek/parser.py         |       71 |        8 |     89% |33, 51, 77, 163-164, 207, 223-247 |
+| custom\_components/ctek/parser.py         |       71 |        6 |     92% |33, 51, 77, 163-164, 207 |
 | custom\_components/ctek/sensor.py         |       35 |       35 |      0% |     3-214 |
 | custom\_components/ctek/switch.py         |       62 |       62 |      0% |     3-203 |
 | custom\_components/ctek/ws.py             |       76 |       57 |     25% |29-39, 43-48, 52-62, 66-116, 120-127, 131 |
-| **TOTAL**                                 | **1131** |  **565** | **50%** |           |
+| **TOTAL**                                 | **1136** |  **544** | **52%** |           |
 
 
 ## Setup coverage badge
