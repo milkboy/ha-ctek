@@ -113,7 +113,8 @@ class CtekApiClient:
                     auth=False,
                 )
                 LOGGER.debug("Access token refreshed using refresh token")
-            except CtekApiClientCommunicationError:
+            except (CtekApiClientCommunicationError, CtekApiClientAuthenticationError):
+                LOGGER.warning("Refresh token rejected, falling back to password login")
                 self._refresh_token = None
                 res = None
         if self._refresh_token is None:
@@ -319,9 +320,13 @@ class CtekApiClient:
                     headers=headers,
                     json=data,
                 )
-                if _needs_refresh(response):
+                if auth and _needs_refresh(response):
                     LOGGER.debug("Access token expired? refreshing")
                     await self.refresh_access_token()
+                    if self._access_token is not None:
+                        headers.update(
+                            {"Authorization": f"Bearer {self._access_token}"}
+                        )
                     response = await self._session.request(
                         method=method,
                         url=url,
@@ -331,6 +336,8 @@ class CtekApiClient:
                 _verify_response_or_raise(response)
                 return await response.json()
 
+        except CtekApiClientAuthenticationError:
+            raise
         except (TimeoutError, asyncio.CancelledError) as exception:
             msg = f"Timeout error during {method} - {exception}"
             raise CtekApiClientCommunicationError(
