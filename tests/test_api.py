@@ -7,7 +7,11 @@ from aioresponses import aioresponses
 from homeassistant.core import HomeAssistant
 
 from custom_components.ctek.api import CtekApiClient
-from custom_components.ctek.const import CONTROL_URL, OAUTH2_TOKEN_URL
+from custom_components.ctek.const import (
+    CONTROL_URL,
+    OAUTH2_TOKEN_URL,
+    CtekApiClientAuthenticationError,
+)
 
 
 @pytest.fixture
@@ -147,8 +151,6 @@ async def test_api_wrapper_retries_with_new_token_on_401(api_client):
 @pytest.mark.asyncio
 async def test_auth_error_propagates_from_api_wrapper(api_client):
     """CtekApiClientAuthenticationError must not be swallowed as a generic error."""
-    from custom_components.ctek.const import CtekApiClientAuthenticationError
-
     with aioresponses() as m:
         # First request 401 triggers refresh, refresh also fails with 401
         m.post(CONTROL_URL, status=401)
