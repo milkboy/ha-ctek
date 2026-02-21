@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.11] - 2026-02-21
+
+### Fixed
+
+- Auth token refresh: retry request was still sending the old Bearer token after a 401 — the `Authorization` header is now correctly updated before retrying
+- Auth token refresh: a 401 from the token endpoint during refresh-token flow was not caught, skipping the password-login fallback; now falls back to password login with a warning log
+- Auth token refresh: `CtekApiClientAuthenticationError` was being swallowed by the broad exception handler and re-raised as a generic error, preventing callers from detecting auth failures
+- Auth token refresh: token-refresh retry was incorrectly triggered for unauthenticated requests, which could cause recursive refresh calls
+- Hassfest validation: services no longer support device filters on target; updated `services.yaml` to use entity selectors instead
+
+### Changed
+
+- Update dependencies (ruff, pylint, websockets, pre-commit, pytest-homeassistant-custom-component and GitHub Actions)
+
 ## [0.0.10] - 2025-09-15
 
 ### Changed

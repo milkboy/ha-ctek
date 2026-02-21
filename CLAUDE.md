@@ -8,6 +8,56 @@ Home Assistant custom integration for CTEK EV chargers. Communicates with the CT
 - `main` — stable/release branch, merged from `dev`
 - Feature branches should be cut from `dev` and target `dev` in PRs
 
+## Release flow
+
+Versions follow `x.y.z` semver. Pre-releases use suffixes: `0.0.11-alpha1`, `0.0.11-beta1`, then `0.0.11`.
+
+HACS users on the **experimental channel** receive pre-releases. Stable channel users only receive full releases.
+
+### Publishing a pre-release (development version)
+
+1. Make sure all PRs are merged into `dev` and CI is green.
+2. Update `CHANGELOG.md` — ensure the upcoming version section has clear, human-readable entries covering all changes since the **last non-pre-release** version. Dependency-only bumps can be grouped as "Update dependencies".
+3. Update the version in `manifest.json` and `const.py` manually (the bump script does not support pre-release suffixes):
+
+   ```bash
+   sed -i 's/"version": ".*"/"version": "0.0.11-alpha1"/' custom_components/ctek/manifest.json
+   sed -i 's/VERSION = ".*"/VERSION = "0.0.11-alpha1"/' custom_components/ctek/const.py
+   ```
+
+4. Review and tidy `CHANGELOG.md` (the script adds placeholder entries).
+5. Commit and push to `dev`:
+
+   ```bash
+   git add manifest.json custom_components/ctek/const.py CHANGELOG.md
+   git commit -m "Bump version to 0.0.11-alpha1"
+   git push
+   ```
+
+6. Create a GitHub **pre-release** with the matching tag:
+
+   ```bash
+   gh release create 0.0.11-alpha1 --prerelease --title "0.0.11-alpha1" \
+     --notes "$(sed -n '/## \[0.0.11\]/,/## \[0.0.10\]/{ /## \[0.0.10\]/!p }' CHANGELOG.md | sed '1d')"
+   ```
+
+### Publishing a stable release
+
+1. Merge `dev` into `main` via PR — do not push directly to `main`.
+2. On `main`, run the version bump script (without pre-release suffix):
+
+   ```bash
+   bash bump_version.sh 0.0.11
+   ```
+
+3. Update `CHANGELOG.md` — the entry should cover all changes since the **last stable release** (`0.0.10`), not just since the last alpha/beta.
+4. Commit, push, and create a **full release** (not pre-release):
+
+   ```bash
+   gh release create 0.0.11 --title "0.0.11" \
+     --notes "$(sed -n '/## \[0.0.11\]/,/## \[0.0.10\]/{ /## \[0.0.10\]/!p }' CHANGELOG.md | sed '1d')"
+   ```
+
 ## Before pushing any changes
 
 Always run the following in order:
