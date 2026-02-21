@@ -29,7 +29,7 @@ def parse_connectors(
     for c in connectors:
         old: ConnectorType | None = None
         new: ConnectorType
-        if ret.get(str(c["id"]), None) is not None:
+        if ret.get(str(c["id"])) is not None:
             old = copy.deepcopy(ret[str(c["id"])])
         if is_ws_connector_status_type(c):
             new = {
