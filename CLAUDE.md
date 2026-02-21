@@ -19,7 +19,10 @@ Always run the following in order:
 # 2. Format check (ruff)
 .venv/bin/python -m ruff format . --check
 
-# 3. Tests with coverage
+# 3. Markdown lint
+.venv/bin/pymarkdown scan **/*.md
+
+# 4. Tests with coverage
 .venv/bin/pytest --cov=./custom_components/ --cov-config=.coveragerc --cov-report=term-missing
 ```
 
@@ -42,7 +45,7 @@ python3.13 -m venv .venv
 
 ## Project layout
 
-```
+```text
 custom_components/ctek/
   __init__.py          # Integration setup/teardown, entry point
   api.py               # HTTP API client (auth, token refresh, commands)
@@ -75,6 +78,7 @@ tests/
 ## Key architecture notes
 
 ### Authentication
+
 - OAuth2 password grant + refresh token flow against `https://iot.ctek.com/oauth/token`
 - `CtekApiClient.refresh_access_token()` tries the refresh token first, falls back to password login if the refresh token is rejected (401)
 - Token refresh is triggered automatically inside `_api_wrapper` on a 401 response; only applies to authenticated requests (`auth=True`)
@@ -82,20 +86,24 @@ tests/
 - `CtekApiClientAuthenticationError` is never swallowed — it propagates through the broad `except Exception` handler explicitly so callers can distinguish auth failures from generic errors
 
 ### Exception hierarchy
-```
+
+```text
 CtekApiClientError
   CtekApiClientCommunicationError  # network / timeout
   CtekApiClientAuthenticationError # 401 / bad credentials
 ```
+
 The coordinator converts `CtekApiClientAuthenticationError` → `ConfigEntryAuthFailed` (triggers HA re-auth notification) during polling. Service calls (send_command, start/stop charge) do not currently trigger re-auth automatically — see issue #156.
 
 ### Coordinator
+
 - Extends `TimestampDataUpdateCoordinator`
 - Handles periodic REST polling + WebSocket subscription for real-time updates
 - WebSocket is restarted at most once every 5 minutes unless forced
 - `handle_car_quirks` implements retry logic for stubborn chargers (max 3 attempts, 60 s apart by default)
 
 ### Services
+
 - `force_refresh` — trigger an immediate data refresh
 - `send_command` — send an arbitrary OCPP instruction to the charger (e.g. `REBOOT`)
 
@@ -105,6 +113,7 @@ The coordinator converts `CtekApiClientAuthenticationError` → `ConfigEntryAuth
 |---|---|
 | Lint | `ruff check` |
 | Format | `ruff format --check` |
+| Markdown lint | `pymarkdown scan` |
 | Tests | `pytest` + coverage report posted to PR |
 | HA validation | Hassfest |
 | HACS validation | HACS action |

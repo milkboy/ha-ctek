@@ -15,7 +15,7 @@
 
 Totally not a quick hack that may or may not work.
 
-### Prerequisites
+## Prerequisites
 
 - OAuth client credentials
 - CTEK account
