@@ -88,24 +88,26 @@ pre-commit install
 
 ## Pre-commit hooks
 
-Most hooks use `language: system` and run tools from the local venv (defined in `requirements.txt`). Only `prettier` uses a remote repo (Node.js tool).
+Most hooks use `language: system` and run tools from the local venv (defined in `requirements.txt`). Generic file hygiene hooks use `pre-commit/pre-commit-hooks`. Only `prettier` uses a remote Node.js repo.
 
-| Hook                | Tool                        | Source                    |
-| ------------------- | --------------------------- | ------------------------- |
-| ruff                | `ruff check --fix`          | local (requirements.txt)  |
-| ruff-format         | `ruff format`               | local                     |
-| codespell           | `codespell`                 | local                     |
-| check-json          | python json.tool            | local                     |
-| no-commit-to-branch | blocks commits to `main`    | local                     |
-| yamllint            | `yamllint`                  | local                     |
-| pymarkdown          | `pymarkdown scan`           | local                     |
-| mypy                | `mypy` (config in mypy.ini) | local                     |
-| prettier            | `prettier`                  | remote (mirrors-prettier) |
+| Hook                | Tool                        | Source                      |
+| ------------------- | --------------------------- | --------------------------- |
+| ruff                | `ruff check --fix`          | local (requirements.txt)    |
+| ruff-format         | `ruff format`               | local                       |
+| codespell           | `codespell`                 | local                       |
+| yamllint            | `yamllint`                  | local                       |
+| pymarkdown          | `pymarkdown scan`           | local                       |
+| mypy                | `mypy` (config in mypy.ini) | local                       |
+| check-json          | JSON syntax check           | pre-commit/pre-commit-hooks |
+| no-commit-to-branch | blocks commits to `main`    | pre-commit/pre-commit-hooks |
+| end-of-file-fixer   | ensures trailing newline    | pre-commit/pre-commit-hooks |
+| trailing-whitespace | removes trailing whitespace | pre-commit/pre-commit-hooks |
+| prettier            | `prettier`                  | mirrors-prettier            |
 
 Manual-only hooks (run with `pre-commit run --hook-stage manual`):
 
-- `check-executables-have-shebangs`
-- `python-typing-update`
+- `check-executables-have-shebangs` (pre-commit/pre-commit-hooks)
+- `python-typing-update` (local)
 
 ## Project layout
 

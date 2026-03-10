@@ -18,28 +18,11 @@ repos:
         language: system
         types_or: [python, markdown, yaml]
         exclude: ^tests/fixtures/|homeassistant/generated/|tests/components/.*/snapshots/
-      - id: check-json
-        name: check-json
-        entry: python -c "import json, sys; [json.load(open(f)) for f in sys.argv[1:]]"
-        language: system
-        types: [json]
-        exclude: (.vscode|.devcontainer)
-      - id: no-commit-to-branch
-        name: no-commit-to-branch
-        entry: python -c "import subprocess, sys; branch = subprocess.check_output(['git', 'symbolic-ref', '--short', 'HEAD']).decode().strip(); sys.exit(1) if branch == 'main' else sys.exit(0)"
-        language: system
-        always_run: true
-        pass_filenames: false
       - id: yamllint
         name: yamllint
         entry: 'yamllint -d "{extends: default, rules: {line-length: {max: 999, level: warning}}}"'
         language: system
         types: [yaml]
-      - id: check-executables-have-shebangs
-        name: check-executables-have-shebangs
-        entry: python -c "import os, sys; [sys.exit(1) for f in sys.argv[1:] if os.access(f, os.X_OK) and not open(f).readline().startswith('#!')]"
-        language: system
-        stages: [manual]
       - id: python-typing-update
         name: python-typing-update
         entry: python-typing-update --py311-plus --force --keep-updates
@@ -58,6 +41,18 @@ repos:
         language: system
         types: [python]
         exclude: ^venv/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
+      - id: check-executables-have-shebangs
+        stages: [manual]
+      - id: no-commit-to-branch
+        args:
+          - --branch=main
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.0.3
     hooks:
