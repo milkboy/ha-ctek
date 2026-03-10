@@ -167,6 +167,7 @@ class CtekSensor(CtekEntity, SensorEntity):
     """ctek Sensor class."""
 
     _attr_native_value: ChargeStateEnum | str | int | float | datetime | None = None
+    entity_description: SensorEntityDescription
 
     def __init__(
         self,
