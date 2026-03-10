@@ -1,66 +1,59 @@
 ---
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.3
+  - repo: local
     hooks:
       - id: ruff
-        args:
-          - --fix
+        name: ruff
+        entry: ruff check --fix
+        language: system
+        types: [python]
       - id: ruff-format
-        files: ^(.+)?[^/]+\.(py|pyi)$
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
-    hooks:
+        name: ruff-format
+        entry: ruff format
+        language: system
+        types: [python]
       - id: codespell
-        args:
-          - --ignore-words-list=hass
-          - --skip="./.*"
-          - --quiet-level=2
-        exclude_types: [csv, json, html]
+        name: codespell
+        entry: codespell --ignore-words-list=hass --skip="./.*" --quiet-level=2
+        language: system
+        types_or: [python, markdown, yaml]
         exclude: ^tests/fixtures/|homeassistant/generated/|tests/components/.*/snapshots/
+      - id: yamllint
+        name: yamllint
+        entry: 'yamllint -d "{extends: default, rules: {line-length: {max: 999, level: warning}}}"'
+        language: system
+        types: [yaml]
+      - id: python-typing-update
+        name: python-typing-update
+        entry: python-typing-update --py311-plus --force --keep-updates
+        language: system
+        stages: [manual]
+        types: [python]
+        files: ^(custom_components|tests|script)/.+\.py$
+      - id: pymarkdown
+        name: pymarkdown
+        entry: pymarkdown scan
+        language: system
+        types: [markdown]
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        exclude: ^venv/
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
-      - id: check-executables-have-shebangs
-        stages: [manual]
       - id: check-json
         exclude: (.vscode|.devcontainer)
+      - id: check-executables-have-shebangs
+        stages: [manual]
       - id: no-commit-to-branch
         args:
           - --branch=main
-  - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.35.1
-    hooks:
-      - id: yamllint
-        args:
-          - "--config-data={extends: default, rules: {line-length: {max: 999, level: warning}}}"
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.0.3
     hooks:
       - id: prettier
-  - repo: https://github.com/cdce8p/python-typing-update
-    rev: v0.6.0
-    hooks:
-      # Run `python-typing-update` hook manually from time to time
-      # to update python typing syntax.
-      # Will require manual work, before submitting changes!
-      # pre-commit run --hook-stage manual python-typing-update --all-files
-      - id: python-typing-update
-        stages: [manual]
-        args:
-          - --py311-plus
-          - --force
-          - --keep-updates
-        files: ^(custom_components|tests|script)/.+\.py$
-  - repo: https://github.com/jackdewinter/pymarkdown
-    rev: v0.9.25
-    hooks:
-      - id: pymarkdown
-        args:
-          - scan
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
-    hooks:
-      - id: mypy
-        args:
-          - --ignore-missing-imports
