@@ -60,38 +60,52 @@ HACS users on the **experimental channel** receive pre-releases. Stable channel 
 
 ## Before pushing any changes
 
-Always run the following in order:
+Run pre-commit hooks (covers ruff, codespell, yamllint, pymarkdown, mypy, prettier, etc.):
 
 ```bash
-# 1. Lint (ruff)
-.venv/bin/python -m ruff check .
+source venv/bin/activate
+pre-commit run --all-files
+```
 
-# 2. Format check (ruff)
-.venv/bin/python -m ruff format . --check
+Then run tests with coverage:
 
-# 3. Markdown lint
-.venv/bin/pymarkdown scan **/*.md
-
-# 4. Tests with coverage
-.venv/bin/pytest --cov=./custom_components/ --cov-config=.coveragerc --cov-report=term-missing
+```bash
+pytest --cov=./custom_components/ --cov-config=.coveragerc --cov-report=term-missing
 ```
 
 Fix any lint or format issues before committing. New code should be covered by tests — check the `Missing` column in the coverage report for uncovered lines in changed files.
 
 ## Local setup
 
-Requires **Python 3.13** (CI uses 3.13; versions ≥3.13 are required by `pytest-homeassistant-custom-component`).
+Requires **Python 3.13+** (CI uses 3.13).
 
 ```bash
-# Install Python 3.13 via Homebrew if not available
-brew install python@3.13
-
-# Create venv and install dependencies
-python3.13 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+python3.14 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pre-commit install
 ```
 
-> **Note:** pin `pycares<5` is no longer needed as of `homeassistant>=2026.2.x` (aiodns 4.0.0 requires pycares>=5). If tests fail at startup with `AttributeError: module 'pycares' has no attribute 'ares_query_a_result'`, downgrade pycares: `.venv/bin/pip install "pycares<5"`.
+## Pre-commit hooks
+
+Most hooks use `language: system` and run tools from the local venv (defined in `requirements.txt`). Only `prettier` uses a remote repo (Node.js tool).
+
+| Hook                | Tool                        | Source                    |
+| ------------------- | --------------------------- | ------------------------- |
+| ruff                | `ruff check --fix`          | local (requirements.txt)  |
+| ruff-format         | `ruff format`               | local                     |
+| codespell           | `codespell`                 | local                     |
+| check-json          | python json.tool            | local                     |
+| no-commit-to-branch | blocks commits to `main`    | local                     |
+| yamllint            | `yamllint`                  | local                     |
+| pymarkdown          | `pymarkdown scan`           | local                     |
+| mypy                | `mypy` (config in mypy.ini) | local                     |
+| prettier            | `prettier`                  | remote (mirrors-prettier) |
+
+Manual-only hooks (run with `pre-commit run --hook-stage manual`):
+
+- `check-executables-have-shebangs`
+- `python-typing-update`
 
 ## Project layout
 
@@ -159,12 +173,14 @@ The coordinator converts `CtekApiClientAuthenticationError` → `ConfigEntryAuth
 
 ## CI checks (GitHub Actions)
 
-| Check | Tool |
-|---|---|
-| Lint | `ruff check` |
-| Format | `ruff format --check` |
-| Markdown lint | `pymarkdown scan` |
-| Tests | `pytest` + coverage report posted to PR |
-| HA validation | Hassfest |
-| HACS validation | HACS action |
-| Security scan | OSV Scanner, CodeQL |
+Workflow files are in `.github/workflows/`. Each job has an explicit `permissions` block (required by CodeQL).
+
+| Workflow          | Job        | What it does                                           |
+| ----------------- | ---------- | ------------------------------------------------------ |
+| `test.yml`        | `setup`    | Install deps, cache venv                               |
+| `test.yml`        | `lint`     | `ruff check`, `ruff format --check`, `pymarkdown scan` |
+| `test.yml`        | `tests`    | `pytest` + coverage comment on PR                      |
+| `validate.yml`    | `hassfest` | Home Assistant integration validation                  |
+| `validate.yml`    | `hacs`     | HACS store validation                                  |
+| `coverage.yml`    | —          | Posts coverage comment from artifact                   |
+| `osv-scanner.yml` | —          | OSV vulnerability scanning                             |
