@@ -75,7 +75,7 @@ class WebSocketClient:
         async with self.session.ws_connect(
             self.url,
             heartbeat=30,  # Send ping every 30 seconds
-            timeout=60,  # Connection timeout
+            timeout=aiohttp.ClientWSTimeout(ws_receive=60, ws_close=60),
             headers=headers,
         ) as websocket:
             self.websocket = websocket

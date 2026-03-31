@@ -77,6 +77,7 @@ class CtekSwitch(CtekEntity, SwitchEntity):
 
     _attr_is_on: bool | None
     _configs: bool = False
+    entity_description: SwitchEntityDescription
 
     def __init__(
         self,
