@@ -177,3 +177,33 @@ async def test_unload_cancels_delayed_operation(
         await async_unload_entry(hass, mock_config_entry_with_coordinator)
 
     mock_coordinator.cancel_delayed_operation.assert_called_once()
+
+
+async def test_unload_flushes_coordinator_store(
+    hass: HomeAssistant, mock_config_entry_with_coordinator, mock_coordinator
+) -> None:
+    """coordinator.unload() must be awaited after async_unload_platforms."""
+    hass.data[DOMAIN] = {mock_config_entry_with_coordinator.entry_id: {}}
+
+    call_order: list[str] = []
+
+    async def record_unload_platforms(*_a, **_kw) -> bool:
+        call_order.append("platforms")
+        return True
+
+    original_unload = mock_coordinator.unload
+
+    async def record_coordinator_unload() -> None:
+        call_order.append("coordinator")
+        return await original_unload()
+
+    mock_coordinator.unload = record_coordinator_unload
+
+    with patch.object(
+        hass.config_entries,
+        "async_unload_platforms",
+        side_effect=record_unload_platforms,
+    ):
+        await async_unload_entry(hass, mock_config_entry_with_coordinator)
+
+    assert call_order == ["platforms", "coordinator"]

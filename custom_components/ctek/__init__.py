@@ -167,7 +167,13 @@ async def async_unload_entry(
         hass.data[DOMAIN].pop(entry.entry_id, None)
         if not hass.data[DOMAIN]:
             hass.data.pop(DOMAIN)
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    result = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if entry.runtime_data is not None:
+        await entry.runtime_data.coordinator.unload()
+
+    return result
 
 
 def async_reload_entry(
