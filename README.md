@@ -13,12 +13,12 @@
 | custom\_components/ctek/data.py           |      114 |        0 |    100% |           |
 | custom\_components/ctek/entity.py         |       36 |        0 |    100% |           |
 | custom\_components/ctek/enums.py          |       43 |        8 |     81% |42-44, 48, 78-80, 84 |
-| custom\_components/ctek/number.py         |       48 |        0 |    100% |           |
+| custom\_components/ctek/number.py         |       46 |        0 |    100% |           |
 | custom\_components/ctek/parser.py         |       73 |        6 |     92% |33, 51, 77, 163-164, 210 |
 | custom\_components/ctek/sensor.py         |       36 |       36 |      0% |     3-215 |
 | custom\_components/ctek/switch.py         |       63 |       63 |      0% |     3-204 |
-| custom\_components/ctek/ws.py             |       77 |       37 |     52% |43-48, 62, 67-117, 121-128 |
-| **TOTAL**                                 | **1157** |  **507** | **56%** |           |
+| custom\_components/ctek/ws.py             |       76 |       37 |     51% |48-53, 67, 72-122, 126-133 |
+| **TOTAL**                                 | **1154** |  **507** | **56%** |           |
 
 
 ## Setup coverage badge
