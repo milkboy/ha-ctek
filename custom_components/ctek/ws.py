@@ -53,6 +53,7 @@ class WebSocketClient:
         while not self._closed:
             try:
                 await self._connect()
+                errors = 0
             except Exception as err:
                 if not self._closed:
                     LOGGER.exception("WebSocket connection failed")
@@ -128,4 +129,4 @@ class WebSocketClient:
 
     async def running(self) -> bool:
         """Check if the WebSocket client is running."""
-        return not self._closed and self._task is not None
+        return not self._closed and self._task is not None and not self._task.done()

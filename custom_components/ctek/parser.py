@@ -192,6 +192,9 @@ def parse_ws_message(
         else:
             prev.update(session_data)
 
+        if data.get("device_online") is not None:
+            old_data["device_status"]["connected"] = data["device_online"]
+
     elif is_ws_connector_status_type(data):
         LOGGER.debug("Status update: %s", data)
         c = copy.deepcopy(

@@ -205,3 +205,29 @@ def test_parse_ws_message_connector_update(
         result["device_status"]["connectors"]["1"]["status_reason"]
         == StatusReasonEnum.no_error
     )
+
+
+def test_parse_ws_message_charging_session_updates_device_connected(
+    charging_session_message, basic_device_data
+):
+    """chargingSessionSummary device_online=True must set device_status.connected."""
+    device_id = "test_device"
+    basic_device_data["device_status"]["connected"] = False
+    charging_session_message["device_online"] = True
+
+    result = parse_ws_message(charging_session_message, device_id, basic_device_data)
+
+    assert result["device_status"]["connected"] is True
+
+
+def test_parse_ws_message_charging_session_device_offline_updates_connected(
+    charging_session_message, basic_device_data
+):
+    """chargingSessionSummary device_online=False must clear device_status.connected."""
+    device_id = "test_device"
+    basic_device_data["device_status"]["connected"] = True
+    charging_session_message["device_online"] = False
+
+    result = parse_ws_message(charging_session_message, device_id, basic_device_data)
+
+    assert result["device_status"]["connected"] is False

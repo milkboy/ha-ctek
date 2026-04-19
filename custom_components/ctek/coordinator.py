@@ -519,34 +519,37 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
         """
         LOGGER.info("Trying to start a charge")
+        try:
+            # set meter value reporting to 30 s
+            await self.set_config("configs.MeterValueSampleInterval", "30")
 
-        # set meter value reporting to 30 s
-        await self.set_config("configs.MeterValueSampleInterval", "30")
-
-        # send start command
-        # SuspendedEVSE -> needs to resume
-        # Preparing -> needs authorize
-        res: InstructionResponseType = (
-            await self.config_entry.runtime_data.client.start_charge(
-                device_id=self.device_id,
-                connector_id=connector_id,
-                resume_charging=self.get_connector_status_sync(
-                    connector_id=connector_id
+            # send start command
+            # SuspendedEVSE -> needs to resume
+            # Preparing -> needs authorize
+            res: InstructionResponseType = (
+                await self.config_entry.runtime_data.client.start_charge(
+                    device_id=self.device_id,
+                    connector_id=connector_id,
+                    resume_charging=self.get_connector_status_sync(
+                        connector_id=connector_id
+                    )
+                    == ChargeStateEnum.suspended_evse,
                 )
-                == ChargeStateEnum.suspended_evse,
             )
-        )
 
-        if not res["accepted"]:
-            msg = "Charger refused or failed the request"
-            LOGGER.error(msg)
-            raise HomeAssistantError(msg)
+            if not res["accepted"]:
+                msg = "Charger refused or failed the request"
+                LOGGER.error(msg)
+                raise HomeAssistantError(msg)
 
-        if self.config_entry.options["enable_quirks"]:
-            LOGGER.info("Quirks enabled")
-            await self.start_delayed_operation(
-                delay=60, func=self.handle_car_quirks, connector_id=connector_id
-            )
+            if self.config_entry.options["enable_quirks"]:
+                LOGGER.info("Quirks enabled")
+                await self.start_delayed_operation(
+                    delay=60, func=self.handle_car_quirks, connector_id=connector_id
+                )
+        except CtekApiClientAuthenticationError:
+            self.config_entry.async_start_reauth(self.hass)
+            raise
 
     async def stop_charge(self, connector_id: int) -> bool | None:
         """Logic for stopping a charge."""
@@ -558,18 +561,22 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         if status not in (ChargeStateEnum.charging, ChargeStateEnum.suspended_ev):
             LOGGER.warning("Connector status is %s", status.value)
 
-        res: InstructionResponseType = (
-            await self.config_entry.runtime_data.client.stop_charge(
-                device_id=self.device_id,
-                connector_id=connector_id,
-                resume_schedule=bool(
-                    self.data.get("device_status", {})  # type: ignore[call-overload]
-                    .get("connectors", {})
-                    .get(str(connector_id), {})
-                    .get("has_active_schedule", False)
-                ),
+        try:
+            res: InstructionResponseType = (
+                await self.config_entry.runtime_data.client.stop_charge(
+                    device_id=self.device_id,
+                    connector_id=connector_id,
+                    resume_schedule=bool(
+                        self.data.get("device_status", {})  # type: ignore[call-overload]
+                        .get("connectors", {})
+                        .get(str(connector_id), {})
+                        .get("has_active_schedule", False)
+                    ),
+                )
             )
-        )
+        except CtekApiClientAuthenticationError:
+            self.config_entry.async_start_reauth(self.hass)
+            raise
         if res.get("accepted"):
             await self.async_request_refresh()
         return res.get("accepted")
@@ -608,13 +615,17 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
 
     async def send_command(self, command: str) -> InstructionResponseType:
         """Send a command to the API."""
-        res: InstructionResponseType = (
-            await self.config_entry.runtime_data.client.send_command(
-                device_id=self.device_id,
-                # connector_id=connector_id,
-                command=command,
+        try:
+            res: InstructionResponseType = (
+                await self.config_entry.runtime_data.client.send_command(
+                    device_id=self.device_id,
+                    # connector_id=connector_id,
+                    command=command,
+                )
             )
-        )
+        except CtekApiClientAuthenticationError:
+            self.config_entry.async_start_reauth(self.hass)
+            raise
         LOGGER.debug(res)
         return res
 

@@ -1,5 +1,6 @@
 """Tests for __init__.py setup/unload/reload lifecycle."""
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -187,7 +188,7 @@ async def test_unload_flushes_coordinator_store(
 
     call_order: list[str] = []
 
-    async def record_unload_platforms(*_a, **_kw) -> bool:
+    async def record_unload_platforms(*_a: Any, **_kw: Any) -> bool:
         call_order.append("platforms")
         return True
 
