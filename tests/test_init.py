@@ -6,7 +6,7 @@ import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
-from custom_components.ctek import async_unload_entry
+from custom_components.ctek import async_reload_entry, async_unload_entry
 from custom_components.ctek.const import DOMAIN
 
 
@@ -104,3 +104,26 @@ async def test_unload_entry_cleans_hass_data_missing_domain_key(
         result = await async_unload_entry(hass, mock_config_entry)
 
     assert result is True
+
+
+async def test_unload_entry_stops_websocket_client(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """WebSocket client must be stopped when present."""
+    mock_client = AsyncMock()
+    hass.data[DOMAIN] = {mock_config_entry.entry_id: {"websocket_client": mock_client}}
+
+    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
+        await async_unload_entry(hass, mock_config_entry)
+
+    mock_client.stop.assert_awaited_once()
+
+
+async def test_reload_entry_delegates_to_config_entries(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """async_reload_entry must schedule a reload via async_schedule_reload."""
+    with patch.object(hass.config_entries, "async_schedule_reload") as mock_reload:
+        async_reload_entry(hass, mock_config_entry)
+
+    mock_reload.assert_called_once_with(mock_config_entry.entry_id)

@@ -156,8 +156,9 @@ async def async_unload_entry(
     # Cleanup code, close connections, etc.
     if client is not None:
         await client.stop()
-    hass.services.async_remove(DOMAIN, "force_refresh")
-    hass.services.async_remove(DOMAIN, "send_command")
+    for service in ("force_refresh", "send_command"):
+        if hass.services.has_service(DOMAIN, service):
+            hass.services.async_remove(DOMAIN, service)
     if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         if not hass.data[DOMAIN]:
@@ -165,13 +166,12 @@ async def async_unload_entry(
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_reload_entry(
+def async_reload_entry(
     hass: HomeAssistant,
     entry: CtekConfigEntry,
 ) -> None:
     """Reload config entry."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+    hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
 CONFIG_VERSION = 3
