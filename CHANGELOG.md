@@ -1,6 +1,18 @@
 # Changelog
 
-## [0.0.11] - 2026-02-21
+## [0.0.11] - unreleased
+
+### Fixed
+
+- Connectivity sensor stuck offline after network outage: WebSocket error counter now resets after each successful connection, `running()` correctly detects a dead task, and `chargingSessionSummary` WS messages now immediately update `device_status.connected` (closes #178)
+- Auth failures during service calls (`send_command`, `start_charge`, `stop_charge`) now trigger the HA re-auth notification instead of a silent error (closes #156)
+
+### Changed
+
+- Update dependencies (pytest-homeassistant-custom-component and transitive upgrades: aiohttp, cryptography, orjson, pillow, pyOpenSSL, requests, uv)
+- Update Python target to 3.14
+
+## [0.0.11-alpha1] - 2026-02-21
 
 ### Fixed
 
