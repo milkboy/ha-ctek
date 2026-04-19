@@ -1,9 +1,14 @@
+---
 name: "Shared cache"
+outputs:
+  cache-hit:
+    description: "Whether the cache was restored"
+    value: ${{ steps.python-cache.outputs.cache-hit }}
 runs:
   using: "composite"
   steps:
-    # Restore cached virtual environment
     - name: Restore virtual environment
+      id: python-cache
       uses: actions/cache@v4
       with:
         path: |
