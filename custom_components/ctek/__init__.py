@@ -158,6 +158,10 @@ async def async_unload_entry(
         await client.stop()
     hass.services.async_remove(DOMAIN, "force_refresh")
     hass.services.async_remove(DOMAIN, "send_command")
+    if DOMAIN in hass.data:
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        if not hass.data[DOMAIN]:
+            hass.data.pop(DOMAIN)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

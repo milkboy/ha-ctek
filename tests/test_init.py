@@ -79,3 +79,28 @@ async def test_unload_entry_removes_services(
 
     assert not hass.services.has_service(DOMAIN, "force_refresh")
     assert not hass.services.has_service(DOMAIN, "send_command")
+
+
+async def test_unload_entry_cleans_hass_data(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """hass.data[DOMAIN][entry_id] must be removed on unload."""
+    hass.data[DOMAIN] = {mock_config_entry.entry_id: {"some_key": "some_value"}}
+
+    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
+        await async_unload_entry(hass, mock_config_entry)
+
+    assert mock_config_entry.entry_id not in hass.data.get(DOMAIN, {})
+    assert DOMAIN not in hass.data
+
+
+async def test_unload_entry_cleans_hass_data_missing_domain_key(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """async_unload_entry must not raise if hass.data[DOMAIN] is absent."""
+    hass.data.pop(DOMAIN, None)
+
+    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
+        result = await async_unload_entry(hass, mock_config_entry)
+
+    assert result is True
