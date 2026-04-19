@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.ctek import async_reload_entry, async_unload_entry
 from custom_components.ctek.const import DOMAIN
+from custom_components.ctek.coordinator import CtekDataUpdateCoordinator
 
 
 @pytest.fixture
@@ -127,3 +128,8 @@ async def test_reload_entry_delegates_to_config_entries(
         async_reload_entry(hass, mock_config_entry)
 
     mock_reload.assert_called_once_with(mock_config_entry.entry_id)
+
+
+def test_coordinator_has_no_async_unload_entry() -> None:
+    """coordinator.async_unload_entry is dead code and must not exist."""
+    assert not hasattr(CtekDataUpdateCoordinator, "async_unload_entry")

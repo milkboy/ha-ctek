@@ -80,18 +80,6 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         )
         self._timer: asyncio.TimerHandle | None = None
 
-    async def async_unload_entry(
-        self, hass: HomeAssistant, entry: CtekConfigEntry
-    ) -> bool:
-        """Unload a config entry."""
-        self._timer = None
-        client: WebSocketClient | None = hass.data[DOMAIN][entry.entry_id].get(
-            "websocket_client"
-        )
-        if client:
-            await client.stop()
-        return True
-
     def cancel_delayed_operation(self) -> None:
         """Cancel any existing timer."""
         if self._timer:
