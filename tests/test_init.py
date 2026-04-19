@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.ctek import async_reload_entry, async_unload_entry
 from custom_components.ctek.const import DOMAIN
 from custom_components.ctek.coordinator import CtekDataUpdateCoordinator
+from custom_components.ctek.data import CtekData
 
 
 @pytest.fixture
@@ -146,8 +147,6 @@ def mock_coordinator():
 @pytest.fixture
 def mock_config_entry_with_coordinator(hass: HomeAssistant, mock_coordinator):
     """Config entry with runtime_data carrying a mock coordinator."""
-    from custom_components.ctek.data import CtekData
-
     entry = MagicMock()
     entry.entry_id = "test_entry_with_coordinator"
     entry.domain = DOMAIN
