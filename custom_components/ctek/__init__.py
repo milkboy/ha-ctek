@@ -156,6 +156,8 @@ async def async_unload_entry(
     # Cleanup code, close connections, etc.
     if client is not None:
         await client.stop()
+    hass.services.async_remove(DOMAIN, "force_refresh")
+    hass.services.async_remove(DOMAIN, "send_command")
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

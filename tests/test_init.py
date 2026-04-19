@@ -1,6 +1,6 @@
 """Tests for __init__.py setup/unload/reload lifecycle."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
@@ -60,3 +60,22 @@ async def test_unload_entry_propagates_false_on_failure(
         result = await async_unload_entry(hass, mock_config_entry)
 
     assert result is False
+
+
+async def test_unload_entry_removes_services(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """Services registered during setup must be removed on unload."""
+    hass.data[DOMAIN] = {mock_config_entry.entry_id: {}}
+
+    hass.services.async_register(DOMAIN, "force_refresh", AsyncMock())
+    hass.services.async_register(DOMAIN, "send_command", AsyncMock())
+
+    assert hass.services.has_service(DOMAIN, "force_refresh")
+    assert hass.services.has_service(DOMAIN, "send_command")
+
+    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
+        await async_unload_entry(hass, mock_config_entry)
+
+    assert not hass.services.has_service(DOMAIN, "force_refresh")
+    assert not hass.services.has_service(DOMAIN, "send_command")
