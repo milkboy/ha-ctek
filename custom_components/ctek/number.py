@@ -1,17 +1,24 @@
 """Module to define Ctek number entities for Home Assistant."""
 
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricCurrent
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import BASE_LOGGER
-from .coordinator import CtekDataUpdateCoordinator
-from .data import CtekConfigEntry
 from .entity import CtekEntity, callback
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .coordinator import CtekDataUpdateCoordinator
+    from .data import CtekConfigEntry
 
 
 class CtekNumberEntityDescription(NumberEntityDescription):

@@ -1,15 +1,20 @@
 """Websocket helper."""
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 
 from .const import BASE_LOGGER, WS_USER_AGENT
 

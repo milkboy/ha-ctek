@@ -77,7 +77,7 @@ Fix any lint or format issues before committing. New code should be covered by t
 
 ## Local setup
 
-Requires **Python 3.13+** (CI uses 3.13).
+Requires **Python 3.14+** (CI uses 3.14).
 
 ```bash
 python3.14 -m venv venv
