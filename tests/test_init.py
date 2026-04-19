@@ -133,3 +133,48 @@ async def test_reload_entry_delegates_to_config_entries(
 def test_coordinator_has_no_async_unload_entry() -> None:
     """coordinator.async_unload_entry is dead code and must not exist."""
     assert not hasattr(CtekDataUpdateCoordinator, "async_unload_entry")
+
+
+@pytest.fixture
+def mock_coordinator():
+    """Mock coordinator with cancel_delayed_operation and unload."""
+    coordinator = MagicMock()
+    coordinator.unload = AsyncMock()
+    return coordinator
+
+
+@pytest.fixture
+def mock_config_entry_with_coordinator(hass: HomeAssistant, mock_coordinator):
+    """Config entry with runtime_data carrying a mock coordinator."""
+    from custom_components.ctek.data import CtekData
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry_with_coordinator"
+    entry.domain = DOMAIN
+    entry.state = ConfigEntryState.LOADED
+    entry.data = {
+        "username": "user",
+        "password": "pass",
+        "client_id": "cid",
+        "client_secret": "csec",
+        "device_id": "dev1",
+    }
+    entry.options = {}
+    entry.runtime_data = CtekData(
+        coordinator=mock_coordinator,
+        client=MagicMock(),
+        integration=MagicMock(),
+    )
+    return entry
+
+
+async def test_unload_cancels_delayed_operation(
+    hass: HomeAssistant, mock_config_entry_with_coordinator, mock_coordinator
+) -> None:
+    """async_unload_entry must cancel any pending coordinator timer."""
+    hass.data[DOMAIN] = {mock_config_entry_with_coordinator.entry_id: {}}
+
+    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
+        await async_unload_entry(hass, mock_config_entry_with_coordinator)
+
+    mock_coordinator.cancel_delayed_operation.assert_called_once()

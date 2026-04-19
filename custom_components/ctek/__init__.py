@@ -156,6 +156,10 @@ async def async_unload_entry(
     # Cleanup code, close connections, etc.
     if client is not None:
         await client.stop()
+
+    if entry.runtime_data is not None:
+        entry.runtime_data.coordinator.cancel_delayed_operation()
+
     for service in ("force_refresh", "send_command"):
         if hass.services.has_service(DOMAIN, service):
             hass.services.async_remove(DOMAIN, service)
