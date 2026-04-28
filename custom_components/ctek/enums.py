@@ -21,7 +21,7 @@ class ChargeStateEnum(Enum):
     unknown = "Unknown"
 
     @staticmethod
-    def find(val: str | None) -> "ChargeStateEnum":
+    def find(val: str | None) -> ChargeStateEnum:
         """Find and return the corresponding ChargeStateEnum member for the given value.
 
         Args:
@@ -61,7 +61,7 @@ class StatusReasonEnum(Enum):
     weak_signal = "WeakSignal"
 
     @staticmethod
-    def find(val: str | None) -> "StatusReasonEnum":
+    def find(val: str | None) -> StatusReasonEnum:
         """Return the corresponding StatusReasonEnum member for the given value.
 
         Args:

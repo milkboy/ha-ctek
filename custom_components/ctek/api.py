@@ -113,7 +113,7 @@ class CtekApiClient:
                     auth=False,
                 )
                 LOGGER.debug("Access token refreshed using refresh token")
-            except (CtekApiClientCommunicationError, CtekApiClientAuthenticationError):
+            except CtekApiClientCommunicationError, CtekApiClientAuthenticationError:
                 LOGGER.warning("Refresh token rejected, falling back to password login")
                 self._refresh_token = None
                 res = None
