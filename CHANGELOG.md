@@ -1,10 +1,14 @@
 # Changelog
 
-## [0.0.11] - unreleased
+## [0.0.11-beta2] - 2026-05-04
 
 ### Fixed
 
 - Reload bulletproofing: token-update and `EVENT_HOMEASSISTANT_STOP` bus listeners are now released on unload (previously every reload leaked one of each); `WebSocketClient.stop()` is bounded by a 5 s timeout so a stuck WS task can't hang reload; platform unload now runs while `hass.data` and the coordinator are still wired so entity teardown sees consistent state; a storage-save failure in `coordinator.unload()` no longer masks an otherwise-successful platform unload
+
+### Changed
+
+- Update dependencies (ruff, pytest-homeassistant-custom-component)
 
 ## [0.0.11-beta1] - 2026-05-04
 
