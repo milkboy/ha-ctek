@@ -5,7 +5,7 @@ mypy==1.20.2
 pip>=26.1
 pre-commit==4.6.0
 pylint==4.0.5
-pymarkdownlnt==0.9.36
+pymarkdownlnt==0.9.37
 pytest-homeassistant-custom-component==0.13.326
 pytest>=9.0.0
 ruff==0.15.12
