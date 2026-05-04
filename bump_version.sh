@@ -85,11 +85,13 @@ sed -i "s/VERSION = \".*\"/VERSION = \"$NEW_VERSION\"/" "$CONST"
 
 # --- CHANGELOG: date-stamp the unreleased section ----------------------------
 
-# Match either "## [x.y.z] - unreleased" or "## [x.y.z-pre] - unreleased".
-UNRELEASED_RE='^## \[[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]+)?\] - unreleased$'
+# Match the in-progress section header. Accepts both:
+#   ## [Unreleased]                    (preferred — no version locked in)
+#   ## [<version>] - unreleased        (legacy form)
+UNRELEASED_RE='^(## \[[Uu]nreleased\]|## \[[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]+)?\] - unreleased)$'
 
 if ! grep -qE "$UNRELEASED_RE" "$CHANGELOG"; then
-    echo "Error: no '## [x.y.z] - unreleased' section found in $CHANGELOG." >&2
+    echo "Error: no '## [Unreleased]' section found in $CHANGELOG." >&2
     echo "Add one with the entries for this release before running this script." >&2
     exit 1
 fi
@@ -102,7 +104,8 @@ path, new_header = sys.argv[1], sys.argv[2]
 with open(path, encoding="utf-8") as f:
     text = f.read()
 pattern = re.compile(
-    r"^## \[[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]+)?\] - unreleased$",
+    r"^(## \[[Uu]nreleased\]"
+    r"|## \[[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]+)?\] - unreleased)$",
     re.MULTILINE,
 )
 new_text, n = pattern.subn(new_header, text, count=1)

@@ -145,6 +145,23 @@ def test_invalid_version_format_rejected(repo: Path, bad: str):
     assert (repo / CONST_REL).read_text() == INITIAL_CONST
 
 
+def test_keep_a_changelog_unreleased_header_accepted(repo: Path):
+    """The plain '## [Unreleased]' header (no version locked in) must be
+    accepted and rewritten to the dated, versioned form."""
+    (repo / CHANGELOG_REL).write_text(
+        "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- foo\n\n"
+        "## [0.0.10] - 2025-09-15\n\n- old\n"
+    )
+    _git(repo, "commit", "-q", "-am", "switch to keep-a-changelog header")
+
+    result = _run_script(repo, "0.0.11-rc1")
+
+    assert result.returncode == 0, result.stderr
+    changelog = (repo / CHANGELOG_REL).read_text()
+    assert f"## [0.0.11-rc1] - {_today()}" in changelog
+    assert "## [Unreleased]" not in changelog
+
+
 def test_missing_unreleased_section_errors(repo: Path):
     (repo / CHANGELOG_REL).write_text(
         "# Changelog\n\n## [0.0.10] - 2025-09-15\n\n- previous\n"

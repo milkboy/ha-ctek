@@ -16,7 +16,7 @@ HACS users on the **experimental channel** receive pre-releases. Stable channel 
 
 ### Working on the next release
 
-While developing, accumulate human-readable entries under a single `## [<next-version>] - unreleased` section at the top of `CHANGELOG.md`. Dependency-only bumps don't need their own bullets — they're aggregated automatically by the release script (see below).
+While developing, accumulate human-readable entries under a single `## [Unreleased]` section at the top of `CHANGELOG.md`. **Do not lock a version number into the header** — the next release stage (alpha/beta/rc/stable) is decided at bump time and the script rewrites the header then. Dependency-only bumps don't need their own bullets — they're aggregated automatically by the release script (see below).
 
 ### Publishing a release (pre-release or stable)
 
@@ -26,7 +26,7 @@ The script:
 
 - syncs with upstream via `git pull --rebase` so freshly merged PRs are visible to the dep-bump scan (skipped automatically if no upstream is configured; opt out with `BUMP_NO_PULL=1`),
 - updates the version string in `custom_components/ctek/manifest.json` and `custom_components/ctek/const.py`,
-- date-stamps the existing `## [<x.y.z>] - unreleased` section to `## [<new-version>] - YYYY-MM-DD`,
+- date-stamps the existing `## [Unreleased]` (or legacy `## [<x.y.z>] - unreleased`) section to `## [<new-version>] - YYYY-MM-DD`,
 - scans `chore(deps): bump …` commits since the last git tag and adds a single `- Update dependencies (pkg1, pkg2, …)` line under `### Changed` (creating the block if absent), deduplicated,
 - stages the modified files (does **not** commit — review first).
 
@@ -59,7 +59,7 @@ Steps:
 
    (For stable releases drop `--prerelease`, set `--target main`, and the version like `VER=0.0.11`.)
 
-6. Start the next cycle by adding a fresh `## [<next-version>] - unreleased` block at the top of `CHANGELOG.md`. **Always commit this on `dev`** (never on `main`) — it can be its own commit or piggy-back on the next change. After a stable release cut from `main`, switch back to `dev` first; once `main` is merged back, add the new unreleased section there.
+6. Start the next cycle by adding a fresh `## [Unreleased]` block at the top of `CHANGELOG.md`. **Always commit this on `dev`** (never on `main`) — it can be its own commit or piggy-back on the next change. After a stable release cut from `main`, switch back to `dev` first; once `main` is merged back, add the new unreleased section there.
 
 ### Tests
 
