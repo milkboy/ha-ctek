@@ -24,6 +24,7 @@ While developing, accumulate human-readable entries under a single `## [<next-ve
 
 The script:
 
+- syncs with upstream via `git pull --rebase` so freshly merged PRs are visible to the dep-bump scan (skipped automatically if no upstream is configured; opt out with `BUMP_NO_PULL=1`),
 - updates the version string in `custom_components/ctek/manifest.json` and `custom_components/ctek/const.py`,
 - date-stamps the existing `## [<x.y.z>] - unreleased` section to `## [<new-version>] - YYYY-MM-DD`,
 - scans `chore(deps): bump …` commits since the last git tag and adds a single `- Update dependencies (pkg1, pkg2, …)` line under `### Changed` (creating the block if absent), deduplicated,

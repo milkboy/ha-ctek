@@ -65,6 +65,15 @@ if [[ -n "$DIRTY" ]]; then
     exit 1
 fi
 
+# Sync with upstream so the dep-bump scan sees freshly merged PRs. Skip if
+# there's no upstream (e.g. detached HEAD or test sandboxes). Set
+# BUMP_NO_PULL=1 to opt out (e.g. when intentionally cutting from a stale
+# local branch).
+if [[ "${BUMP_NO_PULL:-0}" != "1" ]] && git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    echo "→ git pull --rebase (sync with upstream)"
+    git pull --rebase
+fi
+
 DATE=$(date +%Y-%m-%d)
 
 echo "→ Updating $MANIFEST"

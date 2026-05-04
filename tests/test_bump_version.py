@@ -59,13 +59,22 @@ def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _run_script(cwd: Path, version: str) -> subprocess.CompletedProcess[str]:
+def _run_script(
+    cwd: Path,
+    version: str,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         ["bash", str(cwd / "bump_version.sh"), version],
         cwd=cwd,
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
 
 
@@ -280,6 +289,86 @@ def test_dep_bumps_handle_grouped_deps_subject(repo: Path):
     assert len(deps) == 1
     assert "mypy" in deps[0]
     assert "py-cov-action/python-coverage-comment-action" in deps[0]
+
+
+# ---- upstream sync ----------------------------------------------------------
+
+
+def test_no_upstream_runs_without_pull(repo: Path):
+    """The default repo fixture has no remote; the script must still succeed."""
+    result = _run_script(repo, "0.0.11-rc1")
+    assert result.returncode == 0, result.stderr
+    assert "(sync with upstream)" not in result.stdout
+
+
+def test_pull_picks_up_merged_dep_bump_from_remote(tmp_path: Path):
+    """A dep bump merged on the upstream branch but not yet pulled locally
+    must still appear in the aggregated 'Update dependencies' line."""
+    # Set up: bare remote, local clone, original commit pushed.
+    bare = tmp_path / "remote.git"
+    _git(tmp_path, "init", "--bare", "-q", "-b", "main", str(bare))
+
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "custom_components" / "ctek").mkdir(parents=True)
+    (work / MANIFEST_REL).write_text(INITIAL_MANIFEST)
+    (work / CONST_REL).write_text(INITIAL_CONST)
+    (work / CHANGELOG_REL).write_text(INITIAL_CHANGELOG_TEMPLATE.format(extra=""))
+    shutil.copy(SCRIPT, work / "bump_version.sh")
+    (work / "bump_version.sh").chmod(0o755)
+    _git(work, "init", "-q", "-b", "main")
+    _git(work, "remote", "add", "origin", str(bare))
+    _git(work, "add", ".")
+    _git(work, "commit", "-q", "-m", "initial")
+    _git(work, "tag", "0.0.10")
+    _git(work, "push", "-q", "-u", "origin", "main")
+    _git(work, "push", "-q", "--tags")
+
+    # Add a dep-bump commit on a separate clone and push to the remote, so the
+    # local `work` clone is now behind by one commit.
+    other = tmp_path / "other"
+    _git(tmp_path, "clone", "-q", str(bare), str(other))
+    _git(other, "commit", "-q", "--allow-empty", "-m",
+         "chore(deps): bump aiohttp from 3.10.0 to 3.10.1")
+    _git(other, "push", "-q", "origin", "main")
+
+    # The local clone hasn't pulled yet — confirm the bump isn't visible locally.
+    local_log = _git(work, "log", "--oneline").stdout
+    assert "aiohttp" not in local_log
+
+    result = _run_script(work, "0.0.11-rc1")
+
+    assert result.returncode == 0, result.stderr
+    assert "(sync with upstream)" in result.stdout
+    changelog = (work / CHANGELOG_REL).read_text()
+    assert "- Update dependencies (aiohttp)" in changelog
+
+
+def test_bump_no_pull_env_var_skips_pull(tmp_path: Path):
+    """Setting BUMP_NO_PULL=1 must skip the upstream sync even when an
+    upstream is configured."""
+    bare = tmp_path / "remote.git"
+    _git(tmp_path, "init", "--bare", "-q", "-b", "main", str(bare))
+
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "custom_components" / "ctek").mkdir(parents=True)
+    (work / MANIFEST_REL).write_text(INITIAL_MANIFEST)
+    (work / CONST_REL).write_text(INITIAL_CONST)
+    (work / CHANGELOG_REL).write_text(INITIAL_CHANGELOG_TEMPLATE.format(extra=""))
+    shutil.copy(SCRIPT, work / "bump_version.sh")
+    (work / "bump_version.sh").chmod(0o755)
+    _git(work, "init", "-q", "-b", "main")
+    _git(work, "remote", "add", "origin", str(bare))
+    _git(work, "add", ".")
+    _git(work, "commit", "-q", "-m", "initial")
+    _git(work, "tag", "0.0.10")
+    _git(work, "push", "-q", "-u", "origin", "main")
+
+    result = _run_script(work, "0.0.11-rc1", extra_env={"BUMP_NO_PULL": "1"})
+
+    assert result.returncode == 0, result.stderr
+    assert "(sync with upstream)" not in result.stdout
 
 
 # ---- staging behavior -------------------------------------------------------
