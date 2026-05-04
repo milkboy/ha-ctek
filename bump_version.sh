@@ -70,8 +70,9 @@ fi
 # BUMP_NO_PULL=1 to opt out (e.g. when intentionally cutting from a stale
 # local branch).
 if [[ "${BUMP_NO_PULL:-0}" != "1" ]] && git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
-    echo "→ git pull --rebase (sync with upstream)"
-    git pull --rebase
+    echo "→ git pull --rebase --autostash (sync with upstream)"
+    # --autostash so an in-progress unreleased CHANGELOG edit doesn't block.
+    git pull --rebase --autostash
 fi
 
 DATE=$(date +%Y-%m-%d)
