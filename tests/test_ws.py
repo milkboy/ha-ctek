@@ -49,6 +49,59 @@ async def test_running_returns_false_when_closed(ws_client: WebSocketClient):
     assert await ws_client.running() is False
 
 
+async def test_stop_unsubscribes_hass_stop_listener(ws_client: WebSocketClient):
+    """stop() must release the EVENT_HOMEASSISTANT_STOP bus listener.
+
+    Otherwise every reload leaks one listener; HA shutdown then fires .stop()
+    on every dead client.
+    """
+    fake_unsub = MagicMock()
+    ws_client._unsub_hass_stop = fake_unsub
+
+    await ws_client.stop()
+
+    fake_unsub.assert_called_once()
+
+
+async def test_init_captures_hass_stop_unsub():
+    """__init__ must store the unsub returned by async_listen_once."""
+    fake_unsub = MagicMock()
+    hass = MagicMock()
+    hass.bus.async_listen_once = MagicMock(return_value=fake_unsub)
+    entry = MagicMock()
+
+    client = WebSocketClient(hass, entry, "wss://example.com", AsyncMock())
+
+    assert client._unsub_hass_stop is fake_unsub
+
+
+async def test_stop_returns_when_task_ignores_cancellation(
+    ws_client: WebSocketClient,
+):
+    """stop() must not block forever if the WS task ignores cancel().
+
+    Simulates a coroutine that swallows CancelledError (e.g. stuck inside an
+    aiohttp ws_connect that doesn't honor the timeout).
+    """
+
+    async def stuck() -> None:
+        try:
+            await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            # Pretend the task ignored cancellation and kept running.
+            await asyncio.sleep(3600)
+
+    task = asyncio.create_task(stuck())
+    ws_client._task = task
+    ws_client.websocket = None
+
+    await asyncio.wait_for(ws_client.stop(), timeout=10)
+    # Cleanup: forcibly kill the task so the test event loop can close.
+    task.cancel()
+    with contextlib.suppress(BaseException):
+        await task
+
+
 async def test_run_does_not_raise_after_persistent_failures(
     ws_client: WebSocketClient,
 ):

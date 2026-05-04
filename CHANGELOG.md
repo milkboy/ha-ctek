@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- Reload bulletproofing: token-update and `EVENT_HOMEASSISTANT_STOP` bus listeners are now released on unload (previously every reload leaked one of each); `WebSocketClient.stop()` is bounded by a 5 s timeout so a stuck WS task can't hang reload; platform unload now runs while `hass.data` and the coordinator are still wired so entity teardown sees consistent state; a storage-save failure in `coordinator.unload()` no longer masks an otherwise-successful platform unload
+
+## [0.0.11-beta1] - 2026-05-04
+
+### Fixed
+
 - Connectivity sensor stuck offline after network outage: WebSocket error counter now resets after each successful connection, `running()` correctly detects a dead task, and `chargingSessionSummary` WS messages now immediately update `device_status.connected` (closes #178)
 - Coordinator permanently failing every refresh after a transient DNS/network outage: the WS task no longer raises out of its run loop on persistent failures (it keeps retrying with backoff), `WebSocketClient.stop()` no longer leaks a stored exception when awaiting an already-dead task, and `start_ws()` recovers if stopping the previous client fails — so a fresh WS client is always created instead of the coordinator re-raising the old failure on every cycle
 - Auth failures during service calls (`send_command`, `start_charge`, `stop_charge`) now trigger the HA re-auth notification instead of a silent error (closes #156)

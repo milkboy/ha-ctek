@@ -147,31 +147,42 @@ async def async_unload_entry(
     hass: HomeAssistant,
     entry: CtekConfigEntry,
 ) -> bool:
-    """Handle removal of an entry."""
-    LOGGER.debug(f"Unloading {DOMAIN} integration")
+    """Handle removal of an entry.
 
-    client: WebSocketClient | None = (
-        hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("websocket_client")
-    )
-    # Cleanup code, close connections, etc.
-    if client is not None:
-        await client.stop()
+    Order matters: platforms must unload while ``hass.data[DOMAIN][entry_id]``
+    and the coordinator are still wired up, so entity teardown can read state.
+    Only after the platform unload reports success do we tear down the WS
+    client, services, and the data bucket.
+    """
+    LOGGER.debug("Unloading %s integration", DOMAIN)
 
     if entry.runtime_data is not None:
         entry.runtime_data.coordinator.cancel_delayed_operation()
 
+    result = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    client: WebSocketClient | None = (
+        hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("websocket_client")
+    )
+    if client is not None:
+        await client.stop()
+
     for service in ("force_refresh", "send_command"):
         if hass.services.has_service(DOMAIN, service):
             hass.services.async_remove(DOMAIN, service)
+
     if DOMAIN in hass.data:
         hass.data[DOMAIN].pop(entry.entry_id, None)
         if not hass.data[DOMAIN]:
             hass.data.pop(DOMAIN)
 
-    result = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
     if entry.runtime_data is not None:
-        await entry.runtime_data.coordinator.unload()
+        try:
+            await entry.runtime_data.coordinator.unload()
+        except Exception:  # noqa: BLE001
+            # A storage-save failure here mustn't mask a successful platform
+            # unload — the entities are already gone.
+            LOGGER.exception("Coordinator unload (store flush) failed")
 
     return result
 

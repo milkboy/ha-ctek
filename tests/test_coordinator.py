@@ -114,6 +114,36 @@ async def test_start_ws_recovers_when_existing_client_stop_raises(coordinator, h
     assert bucket["websocket_client"] is new_client
 
 
+async def test_unload_calls_token_listener_unsub(coordinator):
+    """coordinator.unload must release the token-bus listener captured at setup.
+
+    Regression: _async_setup called bus.async_listen() but discarded the unsub.
+    Each reload accumulated another handler; the orphaned coordinator kept
+    receiving events and writing to its old store.
+    """
+    unsub = MagicMock()
+    coordinator._unsub_token_listener = unsub
+    coordinator._store = MagicMock()
+    coordinator._store.async_save = AsyncMock()
+    coordinator._data = {}
+
+    await coordinator.unload()
+
+    unsub.assert_called_once()
+
+
+async def test_async_setup_captures_token_listener_unsub(coordinator):
+    """_async_setup must store the unsub returned by bus.async_listen."""
+    fake_unsub = MagicMock()
+    coordinator.hass = MagicMock()
+    coordinator.hass.bus.async_listen = MagicMock(return_value=fake_unsub)
+
+    with patch.object(coordinator, "init_data", AsyncMock(return_value=True)):
+        await coordinator._async_setup()
+
+    assert coordinator._unsub_token_listener is fake_unsub
+
+
 async def test_stop_charge_triggers_reauth_on_auth_failure(coordinator):
     """stop_charge must trigger re-auth on CtekApiClientAuthenticationError."""
     coordinator.config_entry.runtime_data.client.stop_charge = AsyncMock(

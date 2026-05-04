@@ -79,6 +79,7 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             config_entry=config_entry,
         )
         self._timer: asyncio.TimerHandle | None = None
+        self._unsub_token_listener: Callable[[], None] | None = None
 
     def cancel_delayed_operation(self) -> None:
         """Cancel any existing timer."""
@@ -166,7 +167,9 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
     async def _async_setup(self) -> bool:
         """First run. Set up the data from the API and create device."""
         try:
-            self.hass.bus.async_listen(f"{DOMAIN}_tokens_updated", self.handle_tokens)
+            self._unsub_token_listener = self.hass.bus.async_listen(
+                f"{DOMAIN}_tokens_updated", self.handle_tokens
+            )
             await self.init_data()
         except CtekApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
@@ -636,5 +639,8 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         return res
 
     async def unload(self) -> None:
-        """Unload the coordinator and save the data."""
+        """Unload the coordinator: release listeners and persist state."""
+        if self._unsub_token_listener is not None:
+            self._unsub_token_listener()
+            self._unsub_token_listener = None
         await self._store.async_save(self._data)

@@ -180,6 +180,48 @@ async def test_unload_cancels_delayed_operation(
     mock_coordinator.cancel_delayed_operation.assert_called_once()
 
 
+async def test_unload_returns_true_when_coordinator_unload_raises(
+    hass: HomeAssistant, mock_config_entry_with_coordinator, mock_coordinator
+) -> None:
+    """A failure flushing the store must not mark unload as failed.
+
+    Platforms have already unloaded successfully; their teardown should be
+    reported as such even if the post-unload save raises.
+    """
+    hass.data[DOMAIN] = {mock_config_entry_with_coordinator.entry_id: {}}
+    mock_coordinator.unload = AsyncMock(side_effect=OSError("disk full"))
+
+    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
+        result = await async_unload_entry(hass, mock_config_entry_with_coordinator)
+
+    assert result is True
+
+
+async def test_unload_unloads_platforms_before_clearing_hass_data(
+    hass: HomeAssistant, mock_config_entry_with_coordinator
+) -> None:
+    """async_unload_platforms must run while hass.data[DOMAIN][entry_id] still exists.
+
+    Entities being torn down may read from the bucket; clearing it first
+    races against their unload.
+    """
+    entry_id = mock_config_entry_with_coordinator.entry_id
+    hass.data[DOMAIN] = {entry_id: {"sentinel": object()}}
+
+    bucket_present_during_unload = []
+
+    async def check_bucket(*_a: Any, **_kw: Any) -> bool:
+        bucket_present_during_unload.append(entry_id in hass.data.get(DOMAIN, {}))
+        return True
+
+    with patch.object(
+        hass.config_entries, "async_unload_platforms", side_effect=check_bucket
+    ):
+        await async_unload_entry(hass, mock_config_entry_with_coordinator)
+
+    assert bucket_present_during_unload == [True]
+
+
 async def test_unload_flushes_coordinator_store(
     hass: HomeAssistant, mock_config_entry_with_coordinator, mock_coordinator
 ) -> None:

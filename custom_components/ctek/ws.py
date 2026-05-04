@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 from .const import BASE_LOGGER, WS_USER_AGENT
 
 MAX_ERRORS = 10
+STOP_TIMEOUT = 5  # seconds; bound stop() so a stuck task can't hang reload.
 LOGGER = BASE_LOGGER.getChild("ws")
 
 
@@ -40,8 +41,10 @@ class WebSocketClient:
         self._closed = False
         self._task: asyncio.Task | None = None
 
-        # Register stop callback
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.stop)
+        # Register stop callback; capture the unsub so reload doesn't leak it.
+        self._unsub_hass_stop: Callable[[], None] | None = (
+            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.stop)
+        )
 
     async def start(self) -> asyncio.Task:
         """Start the WebSocket client."""
@@ -132,15 +135,19 @@ class WebSocketClient:
     async def stop(self, event: Any = None) -> None:  # noqa: ARG002
         """Stop the WebSocket client."""
         self._closed = True
+        if self._unsub_hass_stop is not None:
+            self._unsub_hass_stop()
+            self._unsub_hass_stop = None
         if self.websocket is not None:
             with contextlib.suppress(Exception):
                 await self.websocket.close()
         if self._task is not None:
             self._task.cancel()
-            # Awaiting a finished task re-raises any stored exception; we
-            # don't care about either CancelledError or a prior failure here.
-            with contextlib.suppress(Exception):
-                await self._task
+            # Bound the wait without re-raising: asyncio.wait returns once
+            # the task finishes or the timeout elapses, whichever is first.
+            # If the task ignores cancel and stays running, we move on rather
+            # than hanging unload/reload forever.
+            await asyncio.wait({self._task}, timeout=STOP_TIMEOUT)
 
     async def running(self) -> bool:
         """Check if the WebSocket client is running."""
