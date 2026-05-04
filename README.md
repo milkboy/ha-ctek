@@ -4,12 +4,12 @@
 
 | Name                                      |    Stmts |     Miss |   Cover |   Missing |
 |------------------------------------------ | -------: | -------: | ------: | --------: |
-| custom\_components/ctek/\_\_init\_\_.py   |       96 |       55 |     43% |44-143, 194-232 |
+| custom\_components/ctek/\_\_init\_\_.py   |       99 |       55 |     44% |44-143, 205-243 |
 | custom\_components/ctek/api.py            |      153 |       52 |     66% |43-48, 63, 137-138, 160-187, 197-221, 247-250, 260-269, 285, 289-290, 314, 341-353, 360-361 |
 | custom\_components/ctek/binary\_sensor.py |       19 |        0 |    100% |           |
 | custom\_components/ctek/config\_flow.py   |       86 |       27 |     69% |83-91, 192-203, 211, 221-273, 279-320 |
 | custom\_components/ctek/const.py          |       14 |        0 |    100% |           |
-| custom\_components/ctek/coordinator.py    |      302 |      213 |     29% |67-81, 86-87, 93-101, 106-111, 115-120, 124-164, 168-176, 180, 190-223, 240, 277-280, 291-330, 334-356, 360-366, 370-376, 382-397, 401-402, 412-518, 535-553, 586-588, 606-611, 615-620, 635-636, 640 |
+| custom\_components/ctek/coordinator.py    |      306 |      209 |     32% |67-82, 87-88, 94-102, 107-112, 116-121, 125-165, 174-177, 183, 193-226, 243, 280-283, 294-333, 337-359, 363-369, 373-379, 385-400, 404-405, 415-521, 538-556, 589-591, 609-614, 618-623, 638-639 |
 | custom\_components/ctek/data.py           |      114 |        0 |    100% |           |
 | custom\_components/ctek/entity.py         |       36 |        0 |    100% |           |
 | custom\_components/ctek/enums.py          |       43 |        8 |     81% |42-44, 48, 78-80, 84 |
@@ -17,8 +17,8 @@
 | custom\_components/ctek/parser.py         |       73 |        6 |     92% |33, 51, 77, 163-164, 210 |
 | custom\_components/ctek/sensor.py         |       36 |       36 |      0% |     3-215 |
 | custom\_components/ctek/switch.py         |       63 |       63 |      0% |     3-204 |
-| custom\_components/ctek/ws.py             |       76 |       31 |     59% |48-53, 71, 80-130, 136-137 |
-| **TOTAL**                                 | **1157** |  **491** | **58%** |           |
+| custom\_components/ctek/ws.py             |       79 |       31 |     61% |51-56, 74, 83-133, 142-143 |
+| **TOTAL**                                 | **1167** |  **487** | **58%** |           |
 
 
 ## Setup coverage badge
