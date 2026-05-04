@@ -10,53 +10,63 @@ Home Assistant custom integration for CTEK EV chargers. Communicates with the CT
 
 ## Release flow
 
-Versions follow `x.y.z` semver. Pre-releases use suffixes: `0.0.11-alpha1`, `0.0.11-beta1`, then `0.0.11`.
+Versions follow `x.y.z` semver. Pre-releases use suffixes: `0.0.11-alpha1`, `0.0.11-beta1`, `0.0.11-rc1`, then `0.0.11`.
 
 HACS users on the **experimental channel** receive pre-releases. Stable channel users only receive full releases.
 
-### Publishing a pre-release (development version)
+### Working on the next release
 
-1. Make sure all PRs are merged into `dev` and CI is green.
-2. Update `CHANGELOG.md` — ensure the upcoming version section has clear, human-readable entries covering all changes since the **last non-pre-release** version. Dependency-only bumps can be grouped as "Update dependencies".
-3. Update the version in `manifest.json` and `const.py` manually (the bump script does not support pre-release suffixes):
+While developing, accumulate human-readable entries under a single `## [<next-version>] - unreleased` section at the top of `CHANGELOG.md`. Dependency-only bumps don't need their own bullets — they're aggregated automatically by the release script (see below).
 
-   ```bash
-   sed -i 's/"version": ".*"/"version": "0.0.11-alpha1"/' custom_components/ctek/manifest.json
-   sed -i 's/VERSION = ".*"/VERSION = "0.0.11-alpha1"/' custom_components/ctek/const.py
-   ```
+### Publishing a release (pre-release or stable)
 
-4. Review and tidy `CHANGELOG.md` (the script adds placeholder entries).
-5. Commit and push to `dev`:
+`bump_version.sh` is the **single source of truth** for version bumps. Do **not** edit `manifest.json`, `const.py`, or the unreleased CHANGELOG header by hand — let the script do it so the format stays consistent and the dependency aggregation runs.
 
-   ```bash
-   git add manifest.json custom_components/ctek/const.py CHANGELOG.md
-   git commit -m "Bump version to 0.0.11-alpha1"
-   git push
-   ```
+The script:
 
-6. Create a GitHub **pre-release** with the matching tag:
+- updates the version string in `custom_components/ctek/manifest.json` and `custom_components/ctek/const.py`,
+- date-stamps the existing `## [<x.y.z>] - unreleased` section to `## [<new-version>] - YYYY-MM-DD`,
+- scans `chore(deps): bump …` commits since the last git tag and adds a single `- Update dependencies (pkg1, pkg2, …)` line under `### Changed` (creating the block if absent), deduplicated,
+- stages the modified files (does **not** commit — review first).
+
+Steps:
+
+1. Make sure all PRs are merged into `dev` and CI is green. For a **stable** release, first merge `dev` into `main` via PR and run the rest from `main`.
+2. Run the script with the target version:
 
    ```bash
-   gh release create 0.0.11-alpha1 --prerelease --title "0.0.11-alpha1" \
-     --notes "$(sed -n '/## \[0.0.11\]/,/## \[0.0.10\]/{ /## \[0.0.10\]/!p }' CHANGELOG.md | sed '1d')"
+   bash bump_version.sh 0.0.11-beta1   # pre-release
+   # or
+   bash bump_version.sh 0.0.11         # stable
    ```
 
-### Publishing a stable release
-
-1. Merge `dev` into `main` via PR — do not push directly to `main`.
-2. On `main`, run the version bump script (without pre-release suffix):
+3. Review the diff (`git diff --staged`). Tidy any rough edges in the dated CHANGELOG section.
+4. Commit and push:
 
    ```bash
-   bash bump_version.sh 0.0.11
+   git commit -m "Bump version to 0.0.11-beta1"
+   git pull --rebase && git push
    ```
 
-3. Update `CHANGELOG.md` — the entry should cover all changes since the **last stable release** (`0.0.10`), not just since the last alpha/beta.
-4. Commit, push, and create a **full release** (not pre-release):
+5. Create the GitHub release. For pre-releases pass `--prerelease`; for stable, omit it. The `awk` extracts only the freshly dated section's body:
 
    ```bash
-   gh release create 0.0.11 --title "0.0.11" \
-     --notes "$(sed -n '/## \[0.0.11\]/,/## \[0.0.10\]/{ /## \[0.0.10\]/!p }' CHANGELOG.md | sed '1d')"
+   VER=0.0.11-beta1
+   NOTES=$(awk -v v="$VER" '$0=="## ["v"] - "strftime("%Y-%m-%d"){flag=1;next} /^## \[/{flag=0} flag' CHANGELOG.md)
+   gh release create "$VER" --prerelease --title "$VER" --target dev --notes "$NOTES"
    ```
+
+   (For stable releases drop `--prerelease`, set `--target main`, and the version like `VER=0.0.11`.)
+
+6. Start the next cycle by adding a fresh `## [<next-version>] - unreleased` block at the top of `CHANGELOG.md`. **Always commit this on `dev`** (never on `main`) — it can be its own commit or piggy-back on the next change. After a stable release cut from `main`, switch back to `dev` first; once `main` is merged back, add the new unreleased section there.
+
+### Tests
+
+The script has integration tests in `tests/test_bump_version.py`. Run them after any change to `bump_version.sh`:
+
+```bash
+pytest tests/test_bump_version.py
+```
 
 ## Before pushing any changes
 
