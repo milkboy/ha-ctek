@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.11-rc1] - 2026-05-04
+
+### Changed
+
+- Update dependencies (pymarkdownlnt, pip)
+- Internal: release tooling (`bump_version.sh`) now handles pre-release versions, date-stamps the unreleased CHANGELOG section, and auto-aggregates Dependabot bumps into a single line. No user-visible behavior change.
+
 ## [0.0.11-beta2] - 2026-05-04
 
 ### Fixed
