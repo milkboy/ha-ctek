@@ -275,6 +275,22 @@ def test_no_dep_bumps_no_changed_block_added(repo: Path):
     assert "### Changed" not in match.group(0)
 
 
+def test_dep_bumps_handle_update_requirement_subject(repo: Path):
+    """Dependabot uses 'update <pkg> requirement' for pip constraints in
+    addition to 'bump <pkg>' for libraries. Both must be aggregated."""
+    _add_commit(repo, "chore(deps): bump aiohttp from 3.10.0 to 3.10.1")
+    _add_commit(repo, "chore(deps): update pip requirement from >=26.1 to >=26.1.1")
+
+    result = _run_script(repo, "0.0.11-rc2")
+
+    assert result.returncode == 0, result.stderr
+    changelog = (repo / CHANGELOG_REL).read_text()
+    deps = [line for line in changelog.splitlines() if "Update dependencies" in line]
+    assert len(deps) == 1
+    assert "aiohttp" in deps[0]
+    assert "pip" in deps[0]
+
+
 def test_dep_bumps_handle_grouped_deps_subject(repo: Path):
     """Dependabot grouped/scoped subjects like
     'chore(deps-dev): bump pkg' should still be parsed."""
@@ -328,8 +344,14 @@ def test_pull_picks_up_merged_dep_bump_from_remote(tmp_path: Path):
     # local `work` clone is now behind by one commit.
     other = tmp_path / "other"
     _git(tmp_path, "clone", "-q", str(bare), str(other))
-    _git(other, "commit", "-q", "--allow-empty", "-m",
-         "chore(deps): bump aiohttp from 3.10.0 to 3.10.1")
+    _git(
+        other,
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "chore(deps): bump aiohttp from 3.10.0 to 3.10.1",
+    )
     _git(other, "push", "-q", "origin", "main")
 
     # The local clone hasn't pulled yet — confirm the bump isn't visible locally.

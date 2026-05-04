@@ -122,12 +122,17 @@ else
     RANGE="HEAD"
 fi
 
-# Extract unique package names from "chore(deps): bump <pkg> from ..." subjects.
-# Tolerates "bump <pkg>" and "bump <group>/<pkg>" (GitHub Actions).
+# Extract unique package names from Dependabot commit subjects. Matches the
+# project's current Dependabot commit-message config:
+#   "chore(deps): bump <pkg> from x to y"        (libraries / actions)
+#   "chore(deps): update <pkg> requirement ..."  (pip constraints)
+# Older "Bump <pkg> from ..." (no chore prefix) and ad-hoc "chore: bump ..."
+# without the `(deps)` scope are not matched — by design; relies on the repo
+# keeping the current Dependabot config.
 # `|| true` so an empty result (grep exit 1 under pipefail) doesn't abort.
 DEPS=$(git log --reverse "$RANGE" --pretty=format:'%s' \
-    | { grep -E '^chore\(deps[^)]*\): bump ' || true; } \
-    | sed -E 's/^chore\(deps[^)]*\): bump ([^[:space:]]+).*/\1/' \
+    | { grep -E '^chore\(deps[^)]*\): (bump|update) ' || true; } \
+    | sed -E 's/^chore\(deps[^)]*\): (bump|update) ([^[:space:]]+).*/\2/' \
     | awk '!seen[$0]++ {if(out) out=out", "$0; else out=$0} END{print out}')
 
 if [[ -n "$DEPS" ]]; then
