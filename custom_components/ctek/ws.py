@@ -53,19 +53,27 @@ class WebSocketClient:
         return task
 
     async def _run(self) -> None:
-        """Run loop."""
+        """Run loop.
+
+        Never raises: a bare exception escaping this task makes every later
+        ``await self._task`` (e.g. from :meth:`stop`) re-raise the stored
+        exception, which previously broke the coordinator's WS-restart path
+        permanently after a transient outage. Instead we keep retrying with
+        backoff until ``stop()`` is called.
+        """
         errors = 0
         while not self._closed:
             try:
                 await self._connect()
                 errors = 0
-            except Exception as err:
-                if not self._closed:
-                    LOGGER.exception("WebSocket connection failed")
-                    errors += 1
-                    if errors > MAX_ERRORS:
-                        raise Exception from err  # noqa: TRY002
-                    await asyncio.sleep(5)  # Wait before reconnecting
+            except Exception:
+                if self._closed:
+                    return
+                LOGGER.exception("WebSocket connection failed")
+                errors += 1
+                # Exponential-ish backoff capped at 60s; keep trying forever.
+                delay = 5 if errors <= MAX_ERRORS else 60
+                await asyncio.sleep(delay)
 
     async def _connect(self) -> None:
         """Connect to the WebSocket server and handle messages."""
@@ -129,7 +137,9 @@ class WebSocketClient:
                 await self.websocket.close()
         if self._task is not None:
             self._task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
+            # Awaiting a finished task re-raises any stored exception; we
+            # don't care about either CancelledError or a prior failure here.
+            with contextlib.suppress(Exception):
                 await self._task
 
     async def running(self) -> bool:

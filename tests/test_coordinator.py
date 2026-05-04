@@ -1,10 +1,13 @@
 """Coordinator service call re-auth tests."""
 
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.util.dt import DEFAULT_TIME_ZONE
 
 from custom_components.ctek.api import CtekApiClientAuthenticationError
+from custom_components.ctek.const import DOMAIN
 from custom_components.ctek.coordinator import CtekDataUpdateCoordinator
 
 
@@ -75,6 +78,40 @@ async def test_start_charge_triggers_reauth_on_auth_failure(coordinator):
     coordinator.config_entry.async_start_reauth.assert_called_once_with(
         coordinator.hass
     )
+
+
+async def test_start_ws_recovers_when_existing_client_stop_raises(coordinator, hass):
+    """A dead/failed WS client must not block creating a fresh one.
+
+    Regression: when ws._run() ended with an exception, every subsequent
+    coordinator update would re-raise it via client.stop() -> await self._task,
+    leaving the same dead client in hass.data forever.
+    """
+    hass.data[DOMAIN] = {coordinator.config_entry.entry_id: {}}
+
+    dead_client = MagicMock()
+    dead_client.running = AsyncMock(return_value=False)
+    err_msg = "dead task re-raised"
+    dead_client.stop = AsyncMock(side_effect=RuntimeError(err_msg))
+
+    bucket = hass.data[DOMAIN][coordinator.config_entry.entry_id]
+    bucket["websocket_client"] = dead_client
+    # Older than 5-minute throttle so start_ws will try to replace it.
+    bucket["websocket_client_start"] = datetime.now(tz=DEFAULT_TIME_ZONE) - timedelta(
+        minutes=10
+    )
+
+    new_client = MagicMock()
+    new_client.start = AsyncMock()
+
+    with patch(
+        "custom_components.ctek.coordinator.WebSocketClient", return_value=new_client
+    ):
+        await coordinator.start_ws()
+
+    dead_client.stop.assert_awaited_once()
+    new_client.start.assert_awaited_once()
+    assert bucket["websocket_client"] is new_client
 
 
 async def test_stop_charge_triggers_reauth_on_auth_failure(coordinator):

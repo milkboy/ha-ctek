@@ -1,6 +1,7 @@
 """WebSocket client tests."""
 
 import asyncio
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -46,6 +47,57 @@ async def test_running_returns_false_when_closed(ws_client: WebSocketClient):
     ws_client._closed = True
 
     assert await ws_client.running() is False
+
+
+async def test_run_does_not_raise_after_persistent_failures(
+    ws_client: WebSocketClient,
+):
+    """_run() must not raise when persistent failures exceed MAX_ERRORS.
+
+    A bare `raise` from _run() leaves self._task in a finished-with-exception
+    state. Any later `await self._task` (e.g. from stop()) re-raises that
+    exception, which previously broke coordinator.start_ws() permanently.
+    """
+    attempts = 0
+
+    async def connect_stub() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts > MAX_ERRORS + 2:
+            ws_client._closed = True
+            return
+        msg = "dns down"
+        raise OSError(msg)
+
+    with (
+        patch.object(ws_client, "_connect", side_effect=connect_stub),
+        patch("asyncio.sleep"),
+    ):
+        await ws_client._run()
+
+    assert ws_client._closed is True
+
+
+async def test_stop_swallows_exception_from_dead_task(
+    ws_client: WebSocketClient,
+):
+    """stop() must not propagate exceptions stored on a finished task."""
+
+    async def failing() -> None:
+        msg = "ws task died"
+        raise RuntimeError(msg)
+
+    task = asyncio.create_task(failing())
+    # Let the task actually finish with the exception stored.
+    with contextlib.suppress(RuntimeError):
+        await task
+    assert task.done()
+
+    ws_client._task = task
+    ws_client.websocket = None
+
+    # Must not raise.
+    await ws_client.stop()
 
 
 async def test_error_counter_resets_after_successful_connection(

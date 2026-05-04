@@ -239,7 +239,13 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
             ):
                 return
 
-            await client.stop()
+            try:
+                await client.stop()
+            except Exception:
+                # A previously-failed WS task can re-raise here. Don't let it
+                # block creating a fresh client — that's the whole point of
+                # restarting.
+                LOGGER.exception("Error stopping previous WebSocket client")
 
         websocket_url = f"{WS_URL}{self.device_id}"
         client = WebSocketClient(
