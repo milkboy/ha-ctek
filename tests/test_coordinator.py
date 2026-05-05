@@ -46,6 +46,7 @@ def coordinator(hass):
         }
         coord.logger = MagicMock()
         coord._timer = None
+        coord._unsub_token_listener = None
     return coord
 
 
@@ -130,6 +131,34 @@ async def test_unload_calls_token_listener_unsub(coordinator):
     await coordinator.unload()
 
     unsub.assert_called_once()
+
+
+async def test_async_setup_does_not_leak_listener_when_init_data_fails(
+    coordinator,
+):
+    """Failed setup retries must not leak token-bus listeners.
+
+    HA does not call async_unload_entry between failed setup retries, so
+    coordinator.unload() never runs. If the listener is registered before
+    init_data and init_data raises, the listener stays alive forever
+    holding a reference to the dead coordinator. Each retry adds another.
+
+    Fix: register only after init_data succeeds.
+    """
+    fake_unsub = MagicMock()
+    coordinator.hass = MagicMock()
+    coordinator.hass.bus.async_listen = MagicMock(return_value=fake_unsub)
+
+    err = CtekApiClientAuthenticationError("transient")
+
+    with (
+        patch.object(coordinator, "init_data", AsyncMock(side_effect=err)),
+        pytest.raises(Exception),  # noqa: B017, PT011
+    ):
+        await coordinator._async_setup()
+
+    coordinator.hass.bus.async_listen.assert_not_called()
+    assert coordinator._unsub_token_listener is None
 
 
 async def test_async_setup_captures_token_listener_unsub(coordinator):

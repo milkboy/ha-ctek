@@ -165,16 +165,24 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
         return False
 
     async def _async_setup(self) -> bool:
-        """First run. Set up the data from the API and create device."""
+        """First run. Set up the data from the API and create device.
+
+        The token-bus listener is registered *after* init_data succeeds.
+        HA does not call async_unload_entry between failed setup retries,
+        so anything registered before a failing init_data leaks: the
+        listener keeps a reference to the dead coordinator and accumulates
+        on every retry.
+        """
         try:
-            self._unsub_token_listener = self.hass.bus.async_listen(
-                f"{DOMAIN}_tokens_updated", self.handle_tokens
-            )
             await self.init_data()
         except CtekApiClientAuthenticationError as exception:
             raise ConfigEntryAuthFailed(exception) from exception
         except CtekApiClientError as exception:
             raise UpdateFailed(exception) from exception
+
+        self._unsub_token_listener = self.hass.bus.async_listen(
+            f"{DOMAIN}_tokens_updated", self.handle_tokens
+        )
 
         return False
 

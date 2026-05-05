@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Token bus listener leak across failed setup retries: when `init_data()` raised (transient API/network) the listener was already registered and HA does not call `async_unload_entry` between setup retries, so each retry left another zombie coordinator subscribed to token-update events. Listener is now registered only after `init_data()` succeeds.
+
 ## [0.0.11-rc1] - 2026-05-04
 
 ### Changed
