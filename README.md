@@ -9,7 +9,7 @@
 | custom\_components/ctek/binary\_sensor.py |       19 |        0 |    100% |           |
 | custom\_components/ctek/config\_flow.py   |       86 |       27 |     69% |83-91, 192-203, 211, 221-273, 279-320 |
 | custom\_components/ctek/const.py          |       14 |        0 |    100% |           |
-| custom\_components/ctek/coordinator.py    |      306 |      209 |     32% |67-82, 87-88, 94-102, 107-112, 116-121, 125-165, 174-177, 183, 193-226, 243, 280-283, 294-333, 337-359, 363-369, 373-379, 385-400, 404-405, 415-521, 538-556, 589-591, 609-614, 618-623, 638-639 |
+| custom\_components/ctek/coordinator.py    |      306 |      207 |     32% |67-82, 87-88, 94-102, 107-112, 116-121, 125-165, 180-181, 191, 201-234, 251, 288-291, 302-341, 345-367, 371-377, 381-387, 393-408, 412-413, 423-529, 546-564, 597-599, 617-622, 626-631, 646-647 |
 | custom\_components/ctek/data.py           |      114 |        0 |    100% |           |
 | custom\_components/ctek/entity.py         |       36 |        0 |    100% |           |
 | custom\_components/ctek/enums.py          |       43 |        8 |     81% |42-44, 48, 78-80, 84 |
@@ -18,7 +18,7 @@
 | custom\_components/ctek/sensor.py         |       36 |       36 |      0% |     3-215 |
 | custom\_components/ctek/switch.py         |       63 |       63 |      0% |     3-204 |
 | custom\_components/ctek/ws.py             |       79 |       31 |     61% |51-56, 74, 83-133, 142-143 |
-| **TOTAL**                                 | **1167** |  **487** | **58%** |           |
+| **TOTAL**                                 | **1167** |  **485** | **58%** |           |
 
 
 ## Setup coverage badge
