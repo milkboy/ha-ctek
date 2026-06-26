@@ -6,7 +6,7 @@ pip>=26.1.2
 pre-commit==4.6.0
 pylint==4.0.6
 pymarkdownlnt==0.9.38
-pytest-homeassistant-custom-component==0.13.339
+pytest-homeassistant-custom-component==0.13.341
 pytest>=9.0.0
 ruff==0.15.18
 websockets==16.0
