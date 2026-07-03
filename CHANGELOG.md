@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Raised the minimum supported Home Assistant version to 2026.1.0 (from 2024.12.0, which was never actually verified) and added a CI job that runs the test suite pinned to that floor so future breaks are caught automatically
+- Dropped the `aioresponses` test dependency (incompatible with aiohttp 3.14's new required `stream_writer` argument); `test_api.py` now mocks `CtekApiClient._session.request` directly
+
 ## [0.0.11-rc2] - 2026-05-05
 
 ### Fixed

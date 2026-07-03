@@ -121,3 +121,38 @@ jobs:
           # If you use a different name, update COMMENT_FILENAME accordingly
           path: python-coverage-comment-action.txt
           include-hidden-files: true
+
+  tests-min-ha:
+    # Verifies the tests still pass against the minimum Home Assistant
+    # version declared in hacs.json, since dependabot only ever bumps
+    # pytest-homeassistant-custom-component toward the newest release.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.3.0
+        with:
+          python-version: "3.14"
+
+      - name: Restore virtual environment
+        id: restore-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local
+            ~/.cache
+            ${{ env.pythonLocation }}
+          key: ${{ runner.os }}-venv-min-ha-${{ hashFiles('.github/requirements-min-ha.txt') }}
+
+      - name: Install dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .github/requirements-min-ha.txt
+
+      - name: Run tests
+        run: pytest
