@@ -5,7 +5,7 @@
 | Name                                      |    Stmts |     Miss |   Cover |   Missing |
 |------------------------------------------ | -------: | -------: | ------: | --------: |
 | custom\_components/ctek/\_\_init\_\_.py   |       99 |       55 |     44% |44-143, 205-243 |
-| custom\_components/ctek/api.py            |      153 |       52 |     66% |43-48, 63, 137-138, 160-187, 197-221, 247-250, 260-269, 285, 289-290, 314, 341-353, 360-361 |
+| custom\_components/ctek/api.py            |      153 |       53 |     65% |43-48, 63, 96, 137-138, 160-187, 197-221, 247-250, 260-269, 285, 289-290, 314, 341-353, 360-361 |
 | custom\_components/ctek/binary\_sensor.py |       19 |        0 |    100% |           |
 | custom\_components/ctek/config\_flow.py   |       86 |       27 |     69% |83-91, 192-203, 211, 221-273, 279-320 |
 | custom\_components/ctek/const.py          |       14 |        0 |    100% |           |
@@ -18,7 +18,7 @@
 | custom\_components/ctek/sensor.py         |       36 |       36 |      0% |     3-215 |
 | custom\_components/ctek/switch.py         |       63 |       63 |      0% |     3-204 |
 | custom\_components/ctek/ws.py             |       79 |       31 |     61% |51-56, 74, 83-133, 142-143 |
-| **TOTAL**                                 | **1167** |  **485** | **58%** |           |
+| **TOTAL**                                 | **1167** |  **486** | **58%** |           |
 
 
 ## Setup coverage badge
