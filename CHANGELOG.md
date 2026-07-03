@@ -4,9 +4,10 @@
 
 ### Changed
 
-- Update dependencies (pytest-homeassistant-custom-component, mypy, google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml, google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml, actions/checkout, ruff, pylint, pymarkdownlnt, pip, actions/setup-python, py-cov-action/python-coverage-comment-action, aioresponses)
+- Update dependencies (pytest-homeassistant-custom-component, mypy, google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml, google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml, actions/checkout, ruff, pylint, pymarkdownlnt, pip, actions/setup-python, py-cov-action/python-coverage-comment-action, aioresponses, actions/cache)
 - Raised the minimum supported Home Assistant version to 2026.1.0 (from 2024.12.0, which was never actually verified) and added a CI job that runs the test suite pinned to that floor so future breaks are caught automatically
 - Dropped the `aioresponses` test dependency (incompatible with aiohttp 3.14's new required `stream_writer` argument); `test_api.py` now mocks `CtekApiClient._session.request` directly
+- Internal: added a `mypy` type-checking step to the lint CI job, bumped `actions/cache` off the deprecated Node.js 20 runtime, added a dependabot entry so actions inside locally-defined composite actions get tracked (previously silently ignored), and dropped the redundant explicit `pytest` pin from `requirements.txt` (it's already exactly version-pinned transitively via `pytest-homeassistant-custom-component`, so the floor constraint only produced unresolvable dependabot PRs). No user-visible behavior change.
 
 ## [0.0.11-rc2] - 2026-05-05
 
