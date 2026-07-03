@@ -9,7 +9,7 @@ runs:
   steps:
     - name: Restore virtual environment
       id: python-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5.1.0
       with:
         path: |
           ~/.local

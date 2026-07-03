@@ -8,6 +8,15 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 15
 
+  # Dependabot's github-actions ecosystem only scans .github/workflows/*.yml;
+  # actions referenced inside locally-defined composite actions (action.yml)
+  # need their own directory entry or they're silently never bumped.
+  - package-ecosystem: "github-actions"
+    directory: "/.github/actions/cache"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 15
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
