@@ -1,53 +1,6 @@
 # Changelog
 
-## [Unreleased]
-
-## [0.0.11-rc3] - 2026-07-03
-
-### Changed
-
-- Update dependencies (pytest-homeassistant-custom-component, mypy, google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml, google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml, actions/checkout, ruff, pylint, pymarkdownlnt, pip, actions/setup-python, py-cov-action/python-coverage-comment-action, aioresponses, actions/cache)
-- Raised the minimum supported Home Assistant version to 2026.1.0 (from 2024.12.0, which was never actually verified) and added a CI job that runs the test suite pinned to that floor so future breaks are caught automatically
-- Dropped the `aioresponses` test dependency (incompatible with aiohttp 3.14's new required `stream_writer` argument); `test_api.py` now mocks `CtekApiClient._session.request` directly
-- Internal: added a `mypy` type-checking step to the lint CI job, bumped `actions/cache` off the deprecated Node.js 20 runtime, added a dependabot entry so actions inside locally-defined composite actions get tracked (previously silently ignored), and dropped the redundant explicit `pytest` pin from `requirements.txt` (it's already exactly version-pinned transitively via `pytest-homeassistant-custom-component`, so the floor constraint only produced unresolvable dependabot PRs). No user-visible behavior change.
-
-## [0.0.11-rc2] - 2026-05-05
-
-### Fixed
-
-- Token bus listener leak across failed setup retries: when `init_data()` raised (transient API/network) the listener was already registered and HA does not call `async_unload_entry` between setup retries, so each retry left another zombie coordinator subscribed to token-update events. Listener is now registered only after `init_data()` succeeds.
-
-## [0.0.11-rc1] - 2026-05-04
-
-### Changed
-
-- Update dependencies (pymarkdownlnt, pip)
-- Internal: release tooling (`bump_version.sh`) now handles pre-release versions, date-stamps the unreleased CHANGELOG section, and auto-aggregates Dependabot bumps into a single line. No user-visible behavior change.
-
-## [0.0.11-beta2] - 2026-05-04
-
-### Fixed
-
-- Reload bulletproofing: token-update and `EVENT_HOMEASSISTANT_STOP` bus listeners are now released on unload (previously every reload leaked one of each); `WebSocketClient.stop()` is bounded by a 5 s timeout so a stuck WS task can't hang reload; platform unload now runs while `hass.data` and the coordinator are still wired so entity teardown sees consistent state; a storage-save failure in `coordinator.unload()` no longer masks an otherwise-successful platform unload
-
-### Changed
-
-- Update dependencies (ruff, pytest-homeassistant-custom-component)
-
-## [0.0.11-beta1] - 2026-05-04
-
-### Fixed
-
-- Connectivity sensor stuck offline after network outage: WebSocket error counter now resets after each successful connection, `running()` correctly detects a dead task, and `chargingSessionSummary` WS messages now immediately update `device_status.connected` (closes #178)
-- Coordinator permanently failing every refresh after a transient DNS/network outage: the WS task no longer raises out of its run loop on persistent failures (it keeps retrying with backoff), `WebSocketClient.stop()` no longer leaks a stored exception when awaiting an already-dead task, and `start_ws()` recovers if stopping the previous client fails — so a fresh WS client is always created instead of the coordinator re-raising the old failure on every cycle
-- Auth failures during service calls (`send_command`, `start_charge`, `stop_charge`) now trigger the HA re-auth notification instead of a silent error (closes #156)
-
-### Changed
-
-- Update dependencies (pytest-homeassistant-custom-component and transitive upgrades: aiohttp, cryptography, orjson, pillow, pyOpenSSL, requests, uv)
-- Update Python target to 3.14
-
-## [0.0.11-alpha1] - 2026-02-21
+## [0.0.11] - 2026-07-04
 
 ### Fixed
 
@@ -56,10 +9,19 @@
 - Auth token refresh: `CtekApiClientAuthenticationError` was being swallowed by the broad exception handler and re-raised as a generic error, preventing callers from detecting auth failures
 - Auth token refresh: token-refresh retry was incorrectly triggered for unauthenticated requests, which could cause recursive refresh calls
 - Hassfest validation: services no longer support device filters on target; updated `services.yaml` to use entity selectors instead
+- Connectivity sensor stuck offline after network outage: WebSocket error counter now resets after each successful connection, `running()` correctly detects a dead task, and `chargingSessionSummary` WS messages now immediately update `device_status.connected` (closes #178)
+- Coordinator permanently failing every refresh after a transient DNS/network outage: the WS task no longer raises out of its run loop on persistent failures (it keeps retrying with backoff), `WebSocketClient.stop()` no longer leaks a stored exception when awaiting an already-dead task, and `start_ws()` recovers if stopping the previous client fails — so a fresh WS client is always created instead of the coordinator re-raising the old failure on every cycle
+- Auth failures during service calls (`send_command`, `start_charge`, `stop_charge`) now trigger the HA re-auth notification instead of a silent error (closes #156)
+- Reload bulletproofing: token-update and `EVENT_HOMEASSISTANT_STOP` bus listeners are now released on unload (previously every reload leaked one of each); `WebSocketClient.stop()` is bounded by a 5 s timeout so a stuck WS task can't hang reload; platform unload now runs while `hass.data` and the coordinator are still wired so entity teardown sees consistent state; a storage-save failure in `coordinator.unload()` no longer masks an otherwise-successful platform unload
+- Token bus listener leak across failed setup retries: when `init_data()` raised (transient API/network) the listener was already registered and HA does not call `async_unload_entry` between setup retries, so each retry left another zombie coordinator subscribed to token-update events. Listener is now registered only after `init_data()` succeeds.
 
 ### Changed
 
-- Update dependencies (ruff, pylint, websockets, pre-commit, pytest-homeassistant-custom-component and GitHub Actions)
+- Update Python target to 3.14
+- Raised the minimum supported Home Assistant version to 2026.1.0 (from 2024.12.0, which was never actually verified) and added a CI job that runs the test suite pinned to that floor so future breaks are caught automatically
+- Dropped the `aioresponses` test dependency (incompatible with aiohttp 3.14's new required `stream_writer` argument); `test_api.py` now mocks `CtekApiClient._session.request` directly
+- Update dependencies (ruff, pylint, websockets, pre-commit, pytest-homeassistant-custom-component, aiohttp, cryptography, orjson, pillow, pyOpenSSL, requests, uv, pymarkdownlnt, pip, mypy, google/osv-scanner-action, actions/checkout, actions/setup-python, py-cov-action/python-coverage-comment-action, aioresponses, actions/cache, GitHub Actions)
+- Internal: release tooling (`bump_version.sh`) now handles pre-release versions, date-stamps the unreleased CHANGELOG section, and auto-aggregates Dependabot bumps into a single line; added a `mypy` type-checking step to the lint CI job; added a dependabot entry so actions inside locally-defined composite actions get tracked (previously silently ignored); dropped the redundant explicit `pytest` pin from `requirements.txt`. No user-visible behavior change.
 
 ## [0.0.10] - 2025-09-15
 
