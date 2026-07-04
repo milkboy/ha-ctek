@@ -4,9 +4,9 @@ Home Assistant custom integration for CTEK EV chargers. Communicates with the CT
 
 ## Branching strategy
 
-- `dev` — integration development, base branch for feature PRs
-- `main` — stable/release branch, merged from `dev`
+- `dev` — default branch; all development and releases (pre-release and stable) happen here
 - Feature branches should be cut from `dev` and target `dev` in PRs
+- There is no `main` branch. One existed historically (stable releases up through `0.0.10` were merged there and tagged from it), but it was deleted at some point without the release flow being updated; every release since `0.0.11-alpha1` has in practice been tagged straight off `dev`. This doc now reflects that as the intended flow.
 
 ## Release flow
 
@@ -32,7 +32,7 @@ The script:
 
 Steps:
 
-1. Make sure all PRs are merged into `dev` and CI is green. For a **stable** release, first merge `dev` into `main` via PR and run the rest from `main`.
+1. Make sure all PRs are merged into `dev` and CI is green.
 2. Run the script with the target version:
 
    ```bash
@@ -57,9 +57,9 @@ Steps:
    gh release create "$VER" --prerelease --title "$VER" --target dev --notes "$NOTES"
    ```
 
-   (For stable releases drop `--prerelease`, set `--target main`, and the version like `VER=0.0.11`.)
+   (For stable releases drop `--prerelease` and use the plain version, e.g. `VER=0.0.11` — `--target dev` either way.)
 
-6. Start the next cycle by adding a fresh `## [Unreleased]` block at the top of `CHANGELOG.md`. **Always commit this on `dev`** (never on `main`) — it can be its own commit or piggy-back on the next change. After a stable release cut from `main`, switch back to `dev` first; once `main` is merged back, add the new unreleased section there.
+6. Start the next cycle by adding a fresh `## [Unreleased]` block at the top of `CHANGELOG.md`, committed on `dev`. For a stable release, also squash all of that version's pre-release CHANGELOG entries (`alpha`/`beta`/`rc`) into the single dated stable section, since they're no longer separately useful once superseded.
 
 ### Tests
 
