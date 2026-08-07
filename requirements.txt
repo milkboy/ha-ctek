@@ -7,5 +7,5 @@ pylint==4.0.6
 pymarkdownlnt==0.9.38
 pytest-homeassistant-custom-component==0.13.346
 ruff==0.15.21
-websockets==16.0
+websockets==17.0.1
 yamllint==1.38.0
