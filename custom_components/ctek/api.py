@@ -97,7 +97,7 @@ class CtekApiClient:
 
     async def refresh_access_token(self) -> None:
         """Refresh the access token."""
-        res: None | dict = None
+        res: dict | None = None
         if self._refresh_token is not None:
             LOGGER.debug("Trying to refresh access token using refresh token")
             try:
