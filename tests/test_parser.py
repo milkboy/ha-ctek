@@ -51,7 +51,7 @@ def basic_device_data():
             "connected": True,
             "connectors": {},
             "load_balancing_onboarded": False,
-            "third_party_ocpp_status": {"external_ocpp": False},
+            "third_party_ocpp_status": {"enabled": False},
         },
         "firmware_update": {"update_available": False},
         "has_schedules": False,
@@ -125,6 +125,28 @@ def test_parse_data_basic(basic_device_data):
     assert result["owner"] is True
 
 
+def test_parse_data_third_party_ocpp_status_enabled(basic_device_data):
+    """The backend reports third_party_ocpp_status via the `enabled` key."""
+    device_id = "test_device"
+    updated_data = deepcopy(basic_device_data)
+    updated_data["device_status"]["third_party_ocpp_status"] = {"enabled": True}
+
+    result = parse_data(basic_device_data, device_id, [updated_data])
+
+    assert result["device_status"]["third_party_ocpp_status"]["enabled"] is True
+
+
+def test_parse_data_third_party_ocpp_status_missing_defaults_false(basic_device_data):
+    """A missing third_party_ocpp_status must default to disabled, not raise."""
+    device_id = "test_device"
+    updated_data = deepcopy(basic_device_data)
+    del updated_data["device_status"]["third_party_ocpp_status"]
+
+    result = parse_data(basic_device_data, device_id, [updated_data])
+
+    assert result["device_status"]["third_party_ocpp_status"]["enabled"] is False
+
+
 def test_parse_ws_message_charging_session(charging_session_message, basic_device_data):
     """Test parsing websocket charging session message."""
     device_id = "test_device"
@@ -190,7 +212,7 @@ def test_parse_ws_message_connector_update(
             }
         },
         "load_balancing_onboarded": False,
-        "third_party_ocpp_status": {"external_ocpp": False},
+        "third_party_ocpp_status": {"enabled": False},
     }
 
     result = parse_ws_message(

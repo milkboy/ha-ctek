@@ -85,9 +85,9 @@ class ConnectorType(ConnectorScheduleType):
 
 
 class ThirdPartyOcppStatusType(TypedDict):
-    """More or less unknown stuff..."""
+    """Whether the device is bound to a third-party (external) OCPP backend."""
 
-    external_ocpp: bool
+    enabled: bool
 
 
 class DeviceStatusTypeOpt(TypedDict, total=False):

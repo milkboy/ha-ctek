@@ -97,7 +97,7 @@ def parse_data(
             "connected": False,
             "connectors": {},
             "load_balancing_onboarded": False,
-            "third_party_ocpp_status": {"external_ocpp": False},
+            "third_party_ocpp_status": {"enabled": False},
         },
         "firmware_update": {"update_available": False},
         "has_schedules": False,
@@ -131,10 +131,10 @@ def parse_data(
                     "load_balancing_onboarded"
                 ),
                 "third_party_ocpp_status": {
-                    "external_ocpp": (
+                    "enabled": bool(
                         d.get("device_status", {})
-                        .get("third_party_ocpp_status")
-                        .get("external_ocpp")
+                        .get("third_party_ocpp_status", {})
+                        .get("enabled", False)
                     )
                 },
             }
