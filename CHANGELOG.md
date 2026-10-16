@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Third-party OCPP status was never read correctly: the backend reports `device_status.third_party_ocpp_status.enabled`, but the parser looked for a non-existent `external_ocpp` key (and would raise if the object was absent). It now reads `enabled` and defaults to `False` when the object is missing.
+
 ## [0.0.11] - 2026-07-04
 
 ### Fixed
