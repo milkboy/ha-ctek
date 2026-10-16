@@ -14,7 +14,7 @@ repos:
         types: [python]
       - id: codespell
         name: codespell
-        entry: codespell --ignore-words-list=hass --skip="./.*" --quiet-level=2
+        entry: codespell --ignore-words-list=hass,thirdparty,assemblin --skip="./.*" --quiet-level=2
         language: system
         types_or: [python, markdown, yaml]
         exclude: ^tests/fixtures/|homeassistant/generated/|tests/components/.*/snapshots/
