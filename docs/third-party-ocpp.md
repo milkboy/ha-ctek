@@ -27,13 +27,17 @@ uses Let's Encrypt), so the firmware trusts the normal public CA set. Therefore:
 
 - A **`wss://` endpoint on your own domain with a normal CA-issued cert** (e.g.
   Let's Encrypt) is trusted by the charger — no firmware changes, no custom CA.
-- **Plaintext `ws://` does _not_ work.** The app's custom-URL field validates
-  both `ws://` and `wss://` strings, but the firmware we tested never actually
-  opened a plaintext OCPP connection — it silently stayed on its CTEK `wss`
-  endpoint. Use `wss://`. (The URL may carry userinfo —
-  `wss://user:pass@host/…` — for HTTP Basic auth to your CSMS.)
+- **Plaintext `ws://` is untested; status unknown.** The app's custom-URL field
+  validates both `ws://` and `wss://` strings, but in our testing the firmware
+  never opened a plaintext OCPP connection — it silently stayed on its CTEK
+  `wss` endpoint. We can't rule out that this was caused by something else in
+  the combination of settings we had in place while chasing a working `wss://`
+  setup (see the recipe below), rather than `ws://` itself being rejected. Use
+  `wss://` until someone confirms `ws://` one way or the other. (The URL may
+  carry userinfo — `wss://user:pass@host/…` — for HTTP Basic auth to your
+  CSMS.)
 
-So the endpoint must be `wss`, which means terminating TLS somewhere the charger
+We used `wss://` throughout, which means terminating TLS somewhere the charger
 can reach (see [Keeping the CSMS off the internet](#keeping-the-csms-off-the-internet)).
 
 ## The relevant cloud API
@@ -140,7 +144,7 @@ took. From then on, send config/resets via your own CSMS (e.g. `lbbrhzn/ocpp`'s
 ## Keeping the CSMS off the internet
 
 The charger reaches the CSMS over the LAN, so the OCPP port need not be
-internet-exposed. Because the endpoint must be `wss`, terminate TLS on a
+internet-exposed. Since `wss://` is the setup we've verified, terminate TLS on a
 dedicated proxy and keep it LAN-only:
 
 - Terminate `wss` on a **dedicated** reverse-proxy frontend bound to the LAN
