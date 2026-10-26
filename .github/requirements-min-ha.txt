@@ -2,3 +2,6 @@
 # Not tracked by dependabot (lives outside the root "/" pip directory it scans) -
 # bump manually, in lockstep with hacs.json's "homeassistant" key.
 pytest-homeassistant-custom-component==0.13.371
+anyio>=4.14.2
+certifi>=2026.10.19
+idna>=3.15
