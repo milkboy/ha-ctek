@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Setup no longer fails when the cloud returns `mac_address: null` for a charger; the MAC connection is simply omitted (#289, thanks @keylogicjohan for the report and fix).
+- Devices without connectors (e.g. Nanogrid Air load balancer) are no longer offered in the config flow, and a `null` connector list no longer crashes the parser. If an account has no supported chargers the flow aborts with a clear message (#290, thanks @keylogicjohan for the report and suggested approach).
 - Third-party OCPP status was never read correctly: the backend reports `device_status.third_party_ocpp_status.enabled`, but the parser looked for a non-existent `external_ocpp` key (and would raise if the object was absent). It now reads `enabled` and defaults to `False` when the object is missing.
 
 ## [0.0.11] - 2026-07-04

@@ -125,7 +125,7 @@ def parse_data(
             ret["device_status"] = {
                 "connected": d.get("device_status", {}).get("connected"),
                 "connectors": parse_connectors(
-                    d.get("device_status", {}).get("connectors")
+                    d.get("device_status", {}).get("connectors") or []
                 ),
                 "load_balancing_onboarded": d.get("device_status", {}).get(
                     "load_balancing_onboarded"
@@ -142,9 +142,10 @@ def parse_data(
                 "update_available": d.get("firmware_update", {}).get("update_available")
             }
             ret["has_schedules"] = d.get("has_schedules", False)
+            device_info = d.get("device_info") or {}
             ret["device_info"] = {
-                "mac_address": d.get("device_info", {}).get("mac_address"),
-                "passkey": d.get("device_info", {}).get("passkey"),
+                "mac_address": device_info.get("mac_address") or "",
+                "passkey": device_info.get("passkey") or "",
             }
             ret["owner"] = d.get("owner", False)
             break

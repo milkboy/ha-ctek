@@ -153,12 +153,11 @@ class CtekDataUpdateCoordinator(TimestampDataUpdateCoordinator[DataType]):
                 model_id=device["standardized_model"],
                 sw_version=device["firmware_id"],
                 hw_version=device["hardware_id"],
-                connections={
-                    (
-                        dr.CONNECTION_NETWORK_MAC,
-                        device["device_info"]["mac_address"],
-                    )
-                },
+                connections=(
+                    {(dr.CONNECTION_NETWORK_MAC, mac)}
+                    if (mac := (device.get("device_info") or {}).get("mac_address"))
+                    else set()
+                ),
             )
             self.device_entry = tmp
             return True

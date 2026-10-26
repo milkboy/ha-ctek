@@ -125,6 +125,13 @@ def test_parse_data_basic(basic_device_data):
     assert result["owner"] is True
 
 
+def test_parse_data_null_connectors(basic_device_data):
+    """A device without connectors (e.g. Nanogrid Air) reports connectors: null."""
+    basic_device_data["device_status"]["connectors"] = None
+    result = parse_data(None, "test_device", [basic_device_data])
+    assert result["device_status"]["connectors"] == {}
+
+
 def test_parse_data_third_party_ocpp_status_enabled(basic_device_data):
     """The backend reports third_party_ocpp_status via the `enabled` key."""
     device_id = "test_device"

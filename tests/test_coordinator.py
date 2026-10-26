@@ -185,3 +185,36 @@ async def test_stop_charge_triggers_reauth_on_auth_failure(coordinator):
     coordinator.config_entry.async_start_reauth.assert_called_once_with(
         coordinator.hass
     )
+
+
+@pytest.mark.parametrize(
+    ("device_info", "expected"),
+    [
+        ({"mac_address": "00:11:22:33:44:55"}, {("mac", "00:11:22:33:44:55")}),
+        ({"mac_address": None}, set()),
+        (None, set()),
+    ],
+)
+async def test_init_data_handles_missing_mac(coordinator, device_info, expected):
+    """A null/absent MAC must not be passed to the device registry."""
+    device = {
+        "device_id": "dev1",
+        "device_alias": "Njord",
+        "model": "m",
+        "standardized_model": "sm",
+        "firmware_id": "f",
+        "hardware_id": "h",
+        "device_info": device_info,
+        "device_status": {"connectors": []},
+    }
+    coordinator.config_entry.runtime_data.client.list_devices.return_value = {
+        "data": [device]
+    }
+    coordinator.config_entry.runtime_data.client.get_configuration.return_value = {}
+    registry = MagicMock()
+    with (
+        patch("custom_components.ctek.coordinator.dr.async_get", return_value=registry),
+        patch("custom_components.ctek.coordinator.dr.CONNECTION_NETWORK_MAC", "mac"),
+    ):
+        assert await coordinator.init_data() is True
+    assert registry.async_get_or_create.call_args.kwargs["connections"] == expected
