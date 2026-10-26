@@ -1,0 +1,24 @@
+# OSV-Scanner configuration, see
+# https://google.github.io/osv-scanner/configuration/
+#
+# These packages are pinned exactly by Home Assistant itself (via
+# pytest-homeassistant-custom-component), so they cannot be raised from this
+# repo. They are test/CI-only dependencies; the integration runs inside the
+# user's Home Assistant. Entries are version-scoped, so they stop matching as
+# soon as the pin moves, and expire to force a re-check.
+
+[[PackageOverrides]]
+name = "pillow"
+ecosystem = "PyPI"
+version = "12.3.0"
+ignore = true
+effectiveUntil = 2027-01-26
+reason = "Pinned exactly by Home Assistant; fix (13.0.0) conflicts with the pin. Test-only dependency."
+
+[[PackageOverrides]]
+name = "uv"
+ecosystem = "PyPI"
+version = "0.12.23"
+ignore = true
+effectiveUntil = 2027-01-26
+reason = "Pinned exactly by Home Assistant 2026.10.0 (the minimum supported version). Test-only dependency."
