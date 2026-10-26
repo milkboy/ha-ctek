@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Raised the minimum supported Home Assistant version to 2026.10.0 (from 2026.1.0). Older versions pin dependencies with known vulnerabilities (pillow, aiohttp, pyjwt, cryptography, …), which the OSV scan flags.
+
 ### Fixed
 
 - Third-party OCPP status was never read correctly: the backend reports `device_status.third_party_ocpp_status.enabled`, but the parser looked for a non-existent `external_ocpp` key (and would raise if the object was absent). It now reads `enabled` and defaults to `False` when the object is missing.
