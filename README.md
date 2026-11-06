@@ -7,18 +7,18 @@
 | custom\_components/ctek/\_\_init\_\_.py   |       99 |       55 |     44% |44-143, 205-243 |
 | custom\_components/ctek/api.py            |      153 |       53 |     65% |43-48, 63, 96, 137-138, 160-187, 197-221, 247-250, 260-269, 285, 289-290, 314, 341-353, 360-361 |
 | custom\_components/ctek/binary\_sensor.py |       19 |        0 |    100% |           |
-| custom\_components/ctek/config\_flow.py   |       86 |       27 |     69% |83-91, 192-203, 211, 221-273, 279-320 |
+| custom\_components/ctek/config\_flow.py   |       91 |       27 |     70% |95-103, 207-218, 226, 236-288, 294-335 |
 | custom\_components/ctek/const.py          |       14 |        0 |    100% |           |
-| custom\_components/ctek/coordinator.py    |      306 |      207 |     32% |67-82, 87-88, 94-102, 107-112, 116-121, 125-165, 180-181, 191, 201-234, 251, 288-291, 302-341, 345-367, 371-377, 381-387, 393-408, 412-413, 423-529, 546-564, 597-599, 617-622, 626-631, 646-647 |
+| custom\_components/ctek/coordinator.py    |      306 |      195 |     36% |67-82, 87-88, 94-102, 107-112, 116-121, 129, 164, 179-180, 190, 200-233, 250, 287-290, 301-340, 344-366, 370-376, 380-386, 392-407, 411-412, 422-528, 545-563, 596-598, 616-621, 625-630, 645-646 |
 | custom\_components/ctek/data.py           |      114 |        0 |    100% |           |
 | custom\_components/ctek/entity.py         |       36 |        0 |    100% |           |
 | custom\_components/ctek/enums.py          |       43 |        8 |     81% |42-44, 48, 78-80, 84 |
 | custom\_components/ctek/number.py         |       46 |        0 |    100% |           |
-| custom\_components/ctek/parser.py         |       73 |        6 |     92% |33, 51, 77, 163-164, 210 |
+| custom\_components/ctek/parser.py         |       74 |        6 |     92% |33, 51, 77, 164-165, 211 |
 | custom\_components/ctek/sensor.py         |       36 |       36 |      0% |     3-215 |
 | custom\_components/ctek/switch.py         |       63 |       63 |      0% |     3-204 |
 | custom\_components/ctek/ws.py             |       79 |       31 |     61% |51-56, 74, 83-133, 142-143 |
-| **TOTAL**                                 | **1167** |  **486** | **58%** |           |
+| **TOTAL**                                 | **1173** |  **474** | **60%** |           |
 
 
 ## Setup coverage badge
