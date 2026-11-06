@@ -3,7 +3,7 @@ certifi>=2026.10.23
 codespell==2.4.3
 colorlog==6.12.0
 idna>=3.20
-mypy==2.4.0
+mypy==2.4.1
 pip>=26.3
 pre-commit==4.7.0
 pylint==4.1.3
