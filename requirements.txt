@@ -11,5 +11,5 @@ pymarkdownlnt==0.9.41
 pytest-homeassistant-custom-component==0.13.375
 ruff==0.17.2
 virtualenv>=21.14.13
-websockets==17.3
+websockets==17.4
 yamllint==1.38.0
