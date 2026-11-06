@@ -112,6 +112,65 @@ class TestConfigFlow:
         if result3.get("data") != expected:
             pytest.fail(f"Expected '{expected}', got {result3.get('data')}")
 
+    async def _run_to_done(self, hass: HomeAssistant, devices: list[dict]) -> dict:
+        mock_client = AsyncMock(CtekApiClient)
+        mock_client.list_devices.return_value = {"data": devices}
+        context: CtekConfigFlowContext = CtekConfigFlowContext(
+            source=config_entries.SOURCE_USER,
+            client=mock_client,
+        )  # type: ignore[no-overload, unused-ignore]
+        result = await hass.config_entries.flow.async_init(DOMAIN, context=context)
+        with patch(
+            "custom_components.ctek.config_flow.CtekConfigFlowHandler._test_credentials",
+            new=AsyncMock(returns=True),
+        ):
+            return await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {
+                    "username": "u",
+                    "password": "p",
+                    "client_id": "foo",
+                    "client_secret": "bar",
+                },
+            )
+
+    async def test_devices_without_connectors_not_offered(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Nanogrid Air (connectors: null) must not be selectable."""
+        result = await self._run_to_done(
+            hass,
+            [
+                {
+                    "device_id": "charger",
+                    "device_alias": "Njord",
+                    "device_status": {"connectors": [{"id": 1}]},
+                },
+                {
+                    "device_id": "nanogrid",
+                    "device_alias": "Nanogrid Air",
+                    "device_status": {"connectors": None},
+                },
+            ],
+        )
+        assert result["type"] == data_entry_flow.FlowResultType.FORM
+        assert list(result["data_schema"].schema["device_id"].container) == ["charger"]
+
+    async def test_abort_when_no_supported_devices(self, hass: HomeAssistant) -> None:
+        """Abort with a clear reason when only unsupported devices exist."""
+        result = await self._run_to_done(
+            hass,
+            [
+                {
+                    "device_id": "nanogrid",
+                    "device_alias": "Nanogrid Air",
+                    "device_status": {"connectors": None},
+                }
+            ],
+        )
+        assert result["type"] == data_entry_flow.FlowResultType.ABORT
+        assert result["reason"] == "no_supported_devices"
+
     async def test_user_step_errors(self, hass: HomeAssistant) -> None:
         mock_client = AsyncMock(CtekApiClient)
         mock_client.list_devices.return_value = {

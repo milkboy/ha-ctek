@@ -42,6 +42,18 @@ APP_PROFILE = "ctek4"
 USER_AGENT = f"CTEK App/4.0.3 (Android {randint(7, 14)}; {choice(devs)})"  # noqa: S311
 
 
+def _is_charger(device: dict[str, Any]) -> bool:
+    """Return False for devices the cloud reports without connectors.
+
+    Devices such as the Nanogrid Air load balancer have ``connectors: null``
+    and cannot be set up as a charger.
+    """
+    status = device.get("device_status")
+    return not (
+        isinstance(status, dict) and "connectors" in status and not status["connectors"]
+    )
+
+
 class CtekConfigFlowContext(config_entries.ConfigFlowContext):
     """Set up the typed context."""
 
@@ -145,7 +157,10 @@ class CtekConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):  # type: 
             + device.get("device_alias")
             + ")"
             for device in self.context["devices"]["data"]
+            if _is_charger(device)
         }
+        if not devices:
+            return self.async_abort(reason="no_supported_devices")
 
         if user_input is None:
             return self.async_show_form(
